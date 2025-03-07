@@ -1,0 +1,26 @@
+sudo: required
+
+language: python
+python:
+  - '3.11'
+
+services:
+  - postgresql
+
+before_script:
+  - psql -c 'create database travis_ci_test;' -U postgres
+
+env:
+  - DATABASE_URI="postgresql://postgres:@localhost:5432/travis_ci_test"
+
+# command to install dependencies
+install: 
+  - python -m pip install -U pip poetry
+  - poetry config virtualenvs.create false
+  - poetry install
+
+script:
+  - pytest
+
+after_success:
+  - codecov
