@@ -578,13 +578,23 @@ ML_VENV="$ML_VENV_DIR/bin/activate"
 # Check if directories exist
 for dir in "$FRONTEND_DIR" "$BACKEND_DIR" "$SERVER_DIR" "$ML_DIR"; do
   if [[ ! -d "$dir" ]]; then
-    user_choice=$(get_user_input "Warning: Directory $dir does not exist. Would you like to create it? (y/n): ")
-    if [[ "$user_choice" == "y" ]]; then
-      mkdir -p "$dir"
-      display_message "Created $dir"
-    else
-      display_message "Skipping $dir"
-    fi
+    while true; do
+      user_choice=$(get_user_input "Warning: Directory $dir does not exist. Would you like to create it? (y/n): ")
+      case $user_choice in
+        [yY])
+          mkdir -p "$dir"
+          display_message "Created $dir"
+          break
+          ;;
+        [nN])
+          display_message "Skipping $dir"
+          break
+          ;;
+        *)
+          display_message "Invalid input. Please enter 'y' or 'n'."
+          ;;
+      esac
+    done
   fi
 done
 
