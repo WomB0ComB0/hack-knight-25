@@ -316,11 +316,11 @@ start_backend() {
   display_message "Starting Backend service..."
   cd "$BACKEND_DIR" || exit 1
 
-  # Check if requirements.txt exists, if not create it
-  if [[ ! -f "requirements.txt" ]]; then
-    touch requirements.txt
-    display_message "Created empty requirements.txt file"
+  if [[ ! -d "$BACKEND_DIR" ]]; then
+    display_message "Backend directory does not exist."
+    return 1
   fi
+  # Check if requirements.txt exists, if not create it
 
   source "$BACKEND_VENV" && pip install -r requirements.txt && python main.py
 }
