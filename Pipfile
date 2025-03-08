@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+requests = "*"
+flask-cors = "*"
+pycryptodome = "*"
+frontend = "*"
+
+[dev-packages]
+
+[scripts]
+frontend = "python -m blockchain"
+client = "python -m client"
