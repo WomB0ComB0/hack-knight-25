@@ -74,7 +74,7 @@ http://localhost:5000/
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/janaSunrise/blockchain-python](https://github.com/WomB0ComB0/hack-knight-25
+git clone https://github.com/WomB0ComB0/hack-knight-25
 ```
 
 2. Install `pipenv`:
