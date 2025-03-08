@@ -315,26 +315,9 @@ block content %}
 
   $(function () {
     $("#button_confirm_transaction").click(function () {
-      $.ajax({
-        url: document.getElementById("node_url").value + "/transactions/new",
-        type: "POST",
-        headers: { "Access-Control-Allow-Origin": "*" },
-        dataType: "json",
-        data: $("#confirmation_transaction_form").serialize(),
-        success: function (response) {
-          $("#transaction_form")[0].reset();
-          $("#confirmation_transaction_form")[0].reset();
-
-          $("#sender_address").val("");
-          $("#sender_private_key").val("");
-          $("#recipient_address").val("");
-          $("#amount").val("");
-
-          $("#basicModal").modal("hide");
-          $("#success_transaction_modal").modal("show");
-        },
         error: function (error) {
           console.log(error);
+          alert("Transaction failed. Please check the node URL and transaction details.");
         },
       });
     });
