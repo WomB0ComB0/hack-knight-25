@@ -356,27 +356,11 @@ start_ml() {
   display_message "Starting ML service..."
   cd "$ML_DIR" || exit 1
 
+  if [[ ! -d "$ML_DIR" ]]; then
+    display_message "ML directory does not exist."
+    return 1
+  fi
   # Check if train.py exists, if not create a simple version
-  if [[ ! -f "train.py" ]]; then
-    cat > train.py << 'EOF'
-# Simple placeholder train.py
-print("ML service started")
-while True:
-    # Keep the service running
-    import time
-    time.sleep(10)
-EOF
-    display_message "Created placeholder train.py file"
-  fi
-
-  # Check if requirements.txt exists, if not create it
-  if [[ ! -f "requirements.txt" ]]; then
-    touch requirements.txt
-    display_message "Created empty requirements.txt file"
-  fi
-
-  source "$ML_VENV" && pip install -r requirements.txt && python train.py
-}
 
 # Function to start all services without tmux
 start_all_with_bg() {
