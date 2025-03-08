@@ -775,7 +775,7 @@ EOF
           if command_exists bun; then
             JS_RUNTIME="bun"
           else
-            check_and_install_bun && JS_RUNTIME="bun"
+        runtime_choice=$(get_user_input "Select runtime: ")
           fi
           ;;
         2)
