@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
   },
   openGraph: {
-    url: "https://next-enterprise.vercel.app/",
+    url: "https://hack-knight-25.vercel.app/",
     images: [
       {
         width: 1200,
