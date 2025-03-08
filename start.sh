@@ -408,17 +408,23 @@ start_all_with_bg() {
   ) &
   BACKEND_PID=$!
 
-  # Check if server package.json has start script
   if [[ -f "$SERVER_DIR/package.json" ]] && ! grep -q '"start"' "$SERVER_DIR/package.json" 2>/dev/null; then
     # Start server with dev command
-    (
-      cd "$SERVER_DIR" && case "$JS_RUNTIME" in
+    (cd "$SERVER_DIR" && case "$JS_RUNTIME" in
       "bun") bun install && bun run dev;;
       "pnpm") pnpm install && pnpm run dev;;
       "yarn") yarn install && yarn dev;;
       "npm") npm install && npm run dev;;
-      esac
-    ) &
+      esac) &
+  else
+    # Start server normally
+    (cd "$SERVER_DIR" && case "$JS_RUNTIME" in
+      "bun") bun install && bun start;;
+      "pnpm") pnpm install && pnpm start;;
+      "yarn") yarn install && yarn start;;
+      "npm") npm install && npm start;;
+      esac) &
+  fi
   else
     # Start server normally
     (
