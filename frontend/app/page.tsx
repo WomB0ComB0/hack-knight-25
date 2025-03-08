@@ -10,7 +10,7 @@ const aboutRef = useRef<HTMLDivElement>(null);
 const featuresRef = useRef<HTMLDivElement>(null);
 const contactRef = useRef<HTMLDivElement>(null);
 
-const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
   ref.current?.scrollIntoView({ behavior: 'smooth' });
 };
 
@@ -26,18 +26,21 @@ return (
           </div>
           <div className="flex space-x-4">
             <button 
+              type="button"
               onClick={() => scrollToSection(aboutRef)}
               className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               About
             </button>
             <button 
+              type="button"
               onClick={() => scrollToSection(featuresRef)}
               className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
               Features
             </button>
             <button 
+              type="button"
               onClick={() => scrollToSection(contactRef)}
               className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
             >
@@ -66,11 +69,15 @@ return (
             MedChain empowers patients with complete control over their health records while enabling secure data sharing with healthcare providers.
           </p>
           <div className="flex justify-center space-x-4">
-            <button className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors">
+            <button 
+              type="button"
+              className="px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center transition-colors"
+            >
               Get Started
               <ArrowRight className="ml-2 h-5 w-5" />
             </button>
             <button 
+              type="button"
               onClick={() => scrollToSection(aboutRef)}
               className="px-8 py-4 border-2 border-blue-600 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors group"
             >
@@ -80,7 +87,7 @@ return (
           </div>
         </div>
       </div>
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+      <div className="absolute inset-0 bg-grid-pattern opacity-5" />
     </div>
 
     {/* About Section */}
@@ -120,7 +127,7 @@ return (
               alt="Medical technology"
               className="rounded-lg shadow-xl"
             />
-            <div className="absolute inset-0 bg-blue-600 opacity-10 rounded-lg"></div>
+            <div className="absolute inset-0 bg-blue-600 opacity-10 rounded-lg" />
           </div>
         </div>
       </div>
@@ -238,7 +245,7 @@ return (
               alt="Medical professional using tablet"
               className="rounded-lg shadow-xl"
             />
-            <div className="absolute inset-0 bg-blue-600 opacity-10 rounded-lg"></div>
+            <div className="absolute inset-0 bg-blue-600 opacity-10 rounded-lg" />
           </div>
         </div>
       </div>
@@ -304,7 +311,7 @@ return (
                 id="message"
                 rows={4}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              ></textarea>
+              />
             </div>
             <button
               type="submit"
@@ -364,4 +371,3 @@ return (
   </div>
 );
 }
-
