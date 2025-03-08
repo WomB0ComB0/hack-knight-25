@@ -297,7 +297,7 @@ start_frontend() {
   cd "$FRONTEND_DIR" || exit 1
   case "$JS_RUNTIME" in
   "bun")
-    bun install && bun run build && bun run start
+bun install && bun run build && bun start
     ;;
   "pnpm")
     pnpm install && pnpm run build && pnpm start
