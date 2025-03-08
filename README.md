@@ -1,14 +1,12 @@
-# Blockchain implementation using Python.
+# Blockchain Implementation Using Python
 
-This is a implementation of a basic blockchain structure in python, with all the description, and
-documentation of it's working and things.
+This repository contains a Python implementation of a basic blockchain structure. Initially, it served as a simple interaction API for hashing, proof of work (PoW), and blockchain information retrieval. It has now been revamped into a fully dynamic RESTful API suitable for blockchain interactions, mining, transaction management, node registration, and resolving conflicts.
 
-**NOTE**: It used to be a basic interaction API for finding the hashs, POW and the info. Currently
-it's revamped into a full stack website with dummy payments mining and a better UI.
+## Definition and Representation of Blockchain
 
-## Definition, and Representation of Blockchain
+A blockchain is a distributed ledger, maintaining an immutable record of transactions. Each block in the blockchain includes transaction data, a timestamp, a proof-of-work (nonce), and a hash of the previous block, ensuring the chain's integrity.
 
-Here is the representation of a transaction in blockchain in Python.
+Example block representation:
 
 ```python
 block = {
@@ -21,37 +19,26 @@ block = {
             'amount': 5,
         }
     ],
-    'proof': 324984774000,
+    'nonce': 324984774000,
     'previous_hash': "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824"
 }
 ```
 
-Each new block contains within itself, the hash of the previous Block. This is crucial because it’s what
-gives blockchains immutability. If an attacker corrupted an earlier Block in the chain then all subsequent
-blocks will contain incorrect hashes.
+## Creating New Blocks
 
-### Creating new Blocks
+Upon initialization, the blockchain starts with a genesis block (the first block) which has no predecessors. New blocks are created through mining, involving proof-of-work computation.
 
-When our Blockchain is instantiated we'll need to seed it with a genesis block, a block with
-no predecessors. We’ll also need to add a "proof" to our genesis block which is the result of
-mining (or proof of work).
+## Understanding Proof of Work
 
-### Understanding Proof of Work
+Proof of Work (PoW) is an algorithm used to validate new blocks. It involves finding a computationally difficult-to-find number (nonce), ensuring security and preventing malicious activities. The hash of the block's contents, including the nonce, must meet specific difficulty criteria (e.g., ending with a certain number of zeros).
 
-A Proof of Work algorithm (PoW) is how new Blocks are created or mined on the blockchain.
-The goal of PoW is to discover a number which solves a problem. The number must be difficult to
-find but easy to verify computationally speaking by anyone on the network.
-This is the core idea behind Proof of Work.
-
-Let’s decide that the hash of some integer x multiplied by another y must end in 0.
-So, `hash(x * y) = ac23dc...0` And for this simplified example, let’s fix `x = 5`.
-Implementing this in Python:
+Example PoW implementation:
 
 ```python
 from hashlib import sha256
 
 x = 5
-y = 0  # Y needs to be calculated
+y = 0
 
 while sha256(f'{x*y}'.encode()).hexdigest()[-1] != "0":
     y += 1
@@ -59,44 +46,64 @@ while sha256(f'{x*y}'.encode()).hexdigest()[-1] != "0":
 print(f'The solution is y = {y}')
 ```
 
-The solution here is `y = 21`. Since, the produced hash ends in `0`:
+## REST API Endpoints
 
+### Base URL
 ```
-hash(5 * 21) = 1253e9373e...5e3600155e860
-```
-
-In Bitcoin, the Proof of Work algorithm is called **Hashcash**. And it’s not too different from our
-basic example above. It’s the algorithm that miners race to solve in order to create a new block.
-In general, the difficulty is determined by the number of characters searched for in a string.
-The miners are then rewarded for their solution by receiving a coin in a transaction.
-
-The network is able to easily verify their solution.
-
-This is what the request for a transaction will look like. It’s what the user sends to the server:
-
-```json
-{
-  "sender": "my address",
-  "recipient": "someone else's address",
-  "amount": 5
-}
+http://localhost:5000/
 ```
 
-## Tech Stack used
+### Available Endpoints
 
-- `Flask` - A HTTP Gateway to expose our blockchain structure externally.
-- `Requests` - A medium to check the HTTP Endpoint request and return JSON response.
+- **GET `/`**: API status and endpoint information.
+- **POST `/transactions/new`**: Submit new transaction.
+  - JSON format: `{sender, recipient, amount, signature}`
+- **GET `/chain`**: Retrieve the full blockchain.
+- **GET `/mine`**: Mine a new block and add it to the blockchain.
+- **POST `/nodes/register`**: Register new blockchain nodes.
+  - JSON format: `{nodes: ["node_address_1", "node_address_2"]}`
+- **GET `/nodes/resolve`**: Resolve blockchain conflicts through consensus.
+- **GET `/nodes/get`**: List all registered nodes.
 
-## How to run the project?
+## Tech Stack Used
 
-- Clone the repo: `git clone https://github.com/janaSunrise/blockchain-python`
-- Install pipenv: `pip3 install pipenv`
-- Make a env with Pipenv: `pipenv sync`
-- Run the servers:
-  - Run the miner server using `python -m frontend`
-  - Run the clients using `python -m client <PORT-HERE>`
+- **Flask**: For creating RESTful HTTP endpoints.
+- **Requests**: For HTTP endpoint requests and JSON responses handling.
 
-You can visit the site, play with the server, client and more, OR Use postman to Play and Mess with the
-HTTP and JSON responses!
+## How to Run the Project
+
+1. Clone the repository:
+```bash
+git clone https://github.com/janaSunrise/blockchain-python
+```
+
+2. Install `pipenv`:
+```bash
+pip3 install pipenv
+```
+
+3. Set up the environment:
+```bash
+pipenv sync
+```
+
+4. Run the blockchain server:
+```bash
+python -m blockchain
+```
+
+5. Test API endpoints using Postman or curl:
+
+Example request for mining a new block:
+```bash
+curl -X GET http://localhost:5000/mine
+```
+
+Example transaction submission:
+```bash
+curl -X POST -H "Content-Type: application/json" -d '{"sender": "address1", "recipient": "address2", "amount": 5, "signature": "signature_here"}' http://localhost:5000/transactions/new
+```
+
+---
 
 <div align="center">Made by Sunrit Jana with ❤️</div>
