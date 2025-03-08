@@ -22,6 +22,11 @@ def new_transaction():
     if not all(field in values for field in required_fields):
         return jsonify({'error': 'Missing transaction details'}), 400
 
+    if not (isinstance(values['amount'], (int, float)) and values['amount'] > 0):
+        return jsonify({'error': 'Invalid amount'}), 400
+
+    # Add more validation for sender, recipient, and signature as needed
+
     transaction_result = blockchain.submit_transaction(
         values['sender'],
         values['recipient'],
