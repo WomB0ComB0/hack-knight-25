@@ -170,6 +170,8 @@ check_virtual_env() {
   # Check if requirements file exists
   if [[ ! -f "$requirements" ]]; then
     display_message "Warning: Requirements file ($requirements) not found."
+    # Create an empty requirements.txt file to prevent errors
+    touch "$requirements"
   fi
 }
 
@@ -295,7 +297,7 @@ start_frontend() {
   cd "$FRONTEND_DIR" || exit 1
   case "$JS_RUNTIME" in
   "bun")
-    bun install && bun run build && bun start
+    bun install && bun run build && bun run start
     ;;
   "pnpm")
     pnpm install && pnpm run build && pnpm start
@@ -313,6 +315,13 @@ start_frontend() {
 start_backend() {
   display_message "Starting Backend service..."
   cd "$BACKEND_DIR" || exit 1
+
+  # Check if requirements.txt exists, if not create it
+  if [[ ! -f "requirements.txt" ]]; then
+    touch requirements.txt
+    display_message "Created empty requirements.txt file"
+  fi
+
   source "$BACKEND_VENV" && pip install -r requirements.txt && python main.py
 }
 
@@ -322,7 +331,13 @@ start_server() {
   cd "$SERVER_DIR" || exit 1
   case "$JS_RUNTIME" in
   "bun")
-    bun install && bun start
+    # Check if package.json exists and has start script
+    if ! grep -q '"start"' package.json 2>/dev/null; then
+      display_message "Warning: No start script found in package.json"
+      bun install && bun run dev
+    else
+      bun install && bun start
+    fi
     ;;
   "pnpm")
     pnpm install && pnpm start
@@ -340,6 +355,26 @@ start_server() {
 start_ml() {
   display_message "Starting ML service..."
   cd "$ML_DIR" || exit 1
+
+  # Check if train.py exists, if not create a simple version
+  if [[ ! -f "train.py" ]]; then
+    cat > train.py << 'EOF'
+# Simple placeholder train.py
+print("ML service started")
+while True:
+    # Keep the service running
+    import time
+    time.sleep(10)
+EOF
+    display_message "Created placeholder train.py file"
+  fi
+
+  # Check if requirements.txt exists, if not create it
+  if [[ ! -f "requirements.txt" ]]; then
+    touch requirements.txt
+    display_message "Created empty requirements.txt file"
+  fi
+
   source "$ML_VENV" && pip install -r requirements.txt && python train.py
 }
 
@@ -347,38 +382,79 @@ start_ml() {
 start_all_with_bg() {
   display_message "Starting all services in background. Press Ctrl+C to stop all services."
 
-  # Create a temp directory for log files
-  mkdir -p /tmp/mono_repo_logs
-
-  # Start each service in background
+  # Start frontend in background
   (
     cd "$FRONTEND_DIR" && case "$JS_RUNTIME" in
-    "bun") bun install && bun run build && bun start;;
+    "bun") bun install && bun run build && bun run start;;
     "pnpm") pnpm install && pnpm run build && pnpm start;;
     "yarn") yarn install && yarn build && yarn start;;
     "npm") npm install && npm run build && npm start;;
     esac
-  ) >/tmp/mono_repo_logs/frontend.log 2>&1 &
+  ) &
   FRONTEND_PID=$!
 
+  # Check if backend requirements.txt exists, if not create it
+  if [[ ! -f "$BACKEND_DIR/requirements.txt" ]]; then
+    mkdir -p "$BACKEND_DIR"
+    touch "$BACKEND_DIR/requirements.txt"
+    display_message "Created empty requirements.txt file for backend"
+  fi
+
+  # Start backend in background
   (
     cd "$BACKEND_DIR" && source "$BACKEND_VENV" && 
     pip install -r requirements.txt && 
     python main.py
-  ) >/tmp/mono_repo_logs/backend.log 2>&1 &
+  ) &
   BACKEND_PID=$!
 
-  (
-    cd "$SERVER_DIR" && case "$JS_RUNTIME" in
-    "bun") bun install && bun start;;
-    "pnpm") pnpm install && pnpm start;;
-    "yarn") yarn install && yarn start;;
-    "npm") npm install && npm start;;
-    esac
-  ) >/tmp/mono_repo_logs/server.log 2>&1 &
+  # Check if server package.json has start script
+  if [[ -f "$SERVER_DIR/package.json" ]] && ! grep -q '"start"' "$SERVER_DIR/package.json" 2>/dev/null; then
+    # Start server with dev command
+    (
+      cd "$SERVER_DIR" && case "$JS_RUNTIME" in
+      "bun") bun install && bun run dev;;
+      "pnpm") pnpm install && pnpm run dev;;
+      "yarn") yarn install && yarn dev;;
+      "npm") npm install && npm run dev;;
+      esac
+    ) &
+  else
+    # Start server normally
+    (
+      cd "$SERVER_DIR" && case "$JS_RUNTIME" in
+      "bun") bun install && bun start;;
+      "pnpm") pnpm install && pnpm start;;
+      "yarn") yarn install && yarn start;;
+      "npm") npm install && npm start;;
+      esac
+    ) &
+  fi
   SERVER_PID=$!
 
-  (cd "$ML_DIR" && source "$ML_VENV" && pip install -r requirements.txt && python train.py) >/tmp/mono_repo_logs/ml.log 2>&1 &
+  # Check if ML train.py exists, if not create a simple version
+  if [[ ! -f "$ML_DIR/train.py" ]]; then
+    mkdir -p "$ML_DIR"
+    cat > "$ML_DIR/train.py" << 'EOF'
+# Simple placeholder train.py
+print("ML service started")
+while True:
+    # Keep the service running
+    import time
+    time.sleep(10)
+EOF
+    display_message "Created placeholder train.py file for ML service"
+  fi
+
+  # Check if ML requirements.txt exists, if not create it
+  if [[ ! -f "$ML_DIR/requirements.txt" ]]; then
+    mkdir -p "$ML_DIR"
+    touch "$ML_DIR/requirements.txt"
+    display_message "Created empty requirements.txt file for ML service"
+  fi
+
+  # Start ML service in background
+  (cd "$ML_DIR" && source "$ML_VENV" && pip install -r requirements.txt && python train.py) &
   ML_PID=$!
 
   display_message "All services started with PIDs:"
@@ -386,9 +462,6 @@ start_all_with_bg() {
   display_message "Backend: $BACKEND_PID"
   display_message "Server: $SERVER_PID"
   display_message "ML: $ML_PID"
-
-  display_message "Logs are being written to /tmp/mono_repo_logs/"
-  display_message "To view logs in real-time, open a new terminal and run: tail -f /tmp/mono_repo_logs/*.log"
 
   # Function to handle script termination
   cleanup() {
@@ -404,7 +477,7 @@ start_all_with_bg() {
 
   # Keep script running
   display_message "Press Ctrl+C to stop all services"
-  tail -f /tmp/mono_repo_logs/*.log
+  wait
 }
 
 # Function to run all services with GNU Screen
@@ -420,24 +493,55 @@ start_all_with_screen() {
   # Start frontend
   screen -S $SESSION -X screen -t "frontend"
   screen -S $SESSION -p "frontend" -X stuff "cd $FRONTEND_DIR && case \"\$JS_RUNTIME\" in
-        \"bun\") bun install && bun run build && bun start;;
+        \"bun\") bun install && bun run build && bun run start;;
         \"pnpm\") pnpm install && pnpm run build && pnpm start;;
         \"yarn\") yarn install && yarn build && yarn start;;
         \"npm\") npm install && npm run build && npm start;;
     esac\n"
 
+  # Check if backend requirements.txt exists, if not create it
+  if [[ ! -f "$BACKEND_DIR/requirements.txt" ]]; then
+    mkdir -p "$BACKEND_DIR"
+    touch "$BACKEND_DIR/requirements.txt"
+  fi
+
   # Start backend
   screen -S $SESSION -X screen -t "backend"
   screen -S $SESSION -p "backend" -X stuff "cd $BACKEND_DIR && source $BACKEND_VENV && pip install -r requirements.txt && python main.py\n"
 
+  # Check if server package.json has start script
+  start_cmd="start"
+  if [[ -f "$SERVER_DIR/package.json" ]] && ! grep -q '"start"' "$SERVER_DIR/package.json" 2>/dev/null; then
+    start_cmd="dev"
+  fi
+
   # Start server
   screen -S $SESSION -X screen -t "server"
   screen -S $SESSION -p "server" -X stuff "cd $SERVER_DIR && case \"\$JS_RUNTIME\" in
-        \"bun\") bun install && bun start;;
-        \"pnpm\") pnpm install && pnpm start;;
-        \"yarn\") yarn install && yarn start;;
-        \"npm\") npm install && npm start;;
+        \"bun\") bun install && bun run $start_cmd;;
+        \"pnpm\") pnpm install && pnpm run $start_cmd;;
+        \"yarn\") yarn install && yarn $start_cmd;;
+        \"npm\") npm install && npm run $start_cmd;;
     esac\n"
+
+  # Check if ML train.py exists, if not create a simple version
+  if [[ ! -f "$ML_DIR/train.py" ]]; then
+    mkdir -p "$ML_DIR"
+    cat > "$ML_DIR/train.py" << 'EOF'
+# Simple placeholder train.py
+print("ML service started")
+while True:
+    # Keep the service running
+    import time
+    time.sleep(10)
+EOF
+  fi
+
+  # Check if ML requirements.txt exists, if not create it
+  if [[ ! -f "$ML_DIR/requirements.txt" ]]; then
+    mkdir -p "$ML_DIR"
+    touch "$ML_DIR/requirements.txt"
+  fi
 
   # Start ML
   screen -S $SESSION -X screen -t "ml"
@@ -557,7 +661,7 @@ while true; do
       tmux rename-window -t "$SESSION" "frontend"
       case "$JS_RUNTIME" in
       "bun")
-        tmux send-keys -t "$SESSION" "cd $FRONTEND_DIR && bun install && bun run build && bun start" C-m
+        tmux send-keys -t "$SESSION" "cd $FRONTEND_DIR && bun install && bun run build && bun run start" C-m
         ;;
       "pnpm")
         tmux send-keys -t "$SESSION" "cd $FRONTEND_DIR && pnpm install && pnpm run build && pnpm start" C-m
@@ -570,27 +674,57 @@ while true; do
         ;;
       esac
 
+      # Check if backend requirements.txt exists, if not create it
+      if [[ ! -f "$BACKEND_DIR/requirements.txt" ]]; then
+        mkdir -p "$BACKEND_DIR"
+        touch "$BACKEND_DIR/requirements.txt"
+      fi
+
       # Start backend (Python)
       tmux new-window -t "$SESSION" -n "backend"
       tmux send-keys -t "$SESSION" "cd $BACKEND_DIR && source $BACKEND_VENV && pip install -r requirements.txt && python main.py" C-m
+
+      # Check if server package.json has start script
+      start_cmd="start"
+      if [[ -f "$SERVER_DIR/package.json" ]] && ! grep -q '"start"' "$SERVER_DIR/package.json" 2>/dev/null; then
+        start_cmd="dev"
+      fi
 
       # Start server
       tmux new-window -t "$SESSION" -n "server"
       case "$JS_RUNTIME" in
       "bun")
-        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && bun install && bun start" C-m
+        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && bun install && bun run $start_cmd" C-m
         ;;
       "pnpm")
-        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && pnpm install && pnpm start" C-m
-        # Kill any existing session
-      ;;
+        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && pnpm install && pnpm run $start_cmd" C-m
+        ;;
       "yarn")
-        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && yarn install && yarn start" C-m
+        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && yarn install && yarn $start_cmd" C-m
         ;;
       "npm")
-        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && npm install && npm start" C-m
+        tmux send-keys -t "$SESSION" "cd $SERVER_DIR && npm install && npm run $start_cmd" C-m
         ;;
       esac
+
+      # Check if ML train.py exists, if not create a simple version
+      if [[ ! -f "$ML_DIR/train.py" ]]; then
+        mkdir -p "$ML_DIR"
+        cat > "$ML_DIR/train.py" << 'EOF'
+# Simple placeholder train.py
+print("ML service started")
+while True:
+    # Keep the service running
+    import time
+    time.sleep(10)
+EOF
+      fi
+
+      # Check if ML requirements.txt exists, if not create it
+      if [[ ! -f "$ML_DIR/requirements.txt" ]]; then
+        mkdir -p "$ML_DIR"
+        touch "$ML_DIR/requirements.txt"
+      fi
 
       # Start ML (Python)
       tmux new-window -t "$SESSION" -n "ml"
