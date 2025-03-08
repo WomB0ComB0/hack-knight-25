@@ -128,11 +128,13 @@ class Blockchain:
         Check that the provided signature corresponds to transaction
         signed by the public key (sender_address)
         """
-        public_key = RSA.importKey(binascii.unhexlify(sender_address))
+        try:
+            public_key = RSA.importKey(binascii.unhexlify(sender_address))
+        except ValueError:
+            return False  # Or raise an exception
         verifier = PKCS1_v1_5.new(public_key)
 
         hash = SHA.new(str(transaction).encode("utf8"))
-        return verifier.verify(hash, binascii.unhexlify(signature))
 
     def submit_transaction(self, sender_address, recipient_address, value, signature):
         """Add a transaction to transactions array if the signature verified"""
