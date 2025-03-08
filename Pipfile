@@ -8,6 +8,7 @@ flask = "*"
 requests = "*"
 flask-cors = "*"
 pycryptodome = "*"
+frontend = "*"
 
 [dev-packages]
 
