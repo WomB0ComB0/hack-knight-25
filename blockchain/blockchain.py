@@ -33,20 +33,7 @@ MINING_SENDER = "THE BLOCKCHAIN"  # Special identifier for mining rewards
 MINING_REWARD = 1  # Amount of cryptocurrency awarded for mining a block
 MINING_DIFFICULTY = 2  # Difficulty of the proof of work (number of leading zeros required)
 
-# Healthcare-specific constants
-RECORD_TYPES = {
-    "DIAGNOSTIC": "diagnostic_report",
-    "PRESCRIPTION": "prescription",
-    "LAB_RESULT": "lab_result",
-    "VITAL_SIGNS": "vital_signs",
-    "CONSULTATION": "consultation_notes",
-    "SURGERY": "surgery_record",
-    "IMAGING": "imaging_report",
-    "VACCINATION": "vaccination",
-    "ALLERGY": "allergy_record",
-    "CONSENT": "patient_consent",
-}
-
+ 
 
 class Blockchain:
     def __init__(self) -> None:
