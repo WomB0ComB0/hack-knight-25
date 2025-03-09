@@ -1,7 +1,4 @@
 import { useEffect, useState, createContext, useContext, ReactNode } from 'react';
-import { Web3Auth } from '@web3auth/modal';
-import { CHAIN_NAMESPACES, IProvider } from '@web3auth/base';
-import { EthereumPrivateKeyProvider } from '@web3auth/ethereum-provider';
 
 // Define types
 type UserRole = 'patient' | 'healthcare_provider';
@@ -10,7 +7,6 @@ interface UserInfo {
   id: string;
   email: string;
   name: string;
-  profileImage: string;
   blockchainId: string;
   role: UserRole;
 }
@@ -19,10 +15,10 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   userInfo: UserInfo | null;
-  provider: IProvider | null;
-  login: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  register: (name: string, email: string, password: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
-  getAuthHeader: () => Promise<{ Authorization: string } | null>;
+  getAuthHeader: () => { Authorization: string } | null;
 }
 
 // Create context for auth state
@@ -31,117 +27,121 @@ const AuthContext = createContext<AuthContextType | null>(null);
 // Backend API URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Web3Auth configuration
-const clientId = 'BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ';
-const chainConfig = {
-  chainNamespace: CHAIN_NAMESPACES.EIP155,
-  chainId: '0xaa36a7',
-  rpcTarget: 'https://rpc.ankr.com/eth_sepolia',
-  displayName: 'Ethereum Sepolia Testnet',
-  blockExplorerUrl: 'https://sepolia.etherscan.io',
-  ticker: 'ETH',
-  tickerName: 'Ethereum',
-};
-
-// Create and configure Web3Auth instance
-const privateKeyProvider = new EthereumPrivateKeyProvider({
-  config: { chainConfig: chainConfig as any }
-});
-
-const web3auth = new Web3Auth({
-  clientId,
-  web3AuthNetwork: 'sapphire_mainnet',
-  privateKeyProvider,
-});
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [userInfo, setUserInfo] = useState<UserInfo | null>(null);
-  const [provider, setProvider] = useState<IProvider | null>(null);
 
   useEffect(() => {
-    const initAuth = async () => {
+    const checkAuth = async () => {
       try {
-        await web3auth.initModal();
+        const apiKey = localStorage.getItem('apiKey');
+        if (!apiKey) {
+          setIsLoading(false);
+          return;
+        }
 
-        if (web3auth.connected) {
-          setProvider(web3auth.provider);
-          await getUserInfo();
-          setIsLoggedIn(true);
+        const response = await fetch(`${API_BASE_URL}/auth/validate`, {
+          headers: {
+            'Authorization': `ApiKey ${apiKey}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.valid) {
+            setUserInfo({
+              id: data.user_id,
+              email: data.user_info.email,
+              name: data.user_info.name,
+              blockchainId: data.user_id,
+              role: data.role,
+            });
+            setIsLoggedIn(true);
+          }
         }
       } catch (error) {
-        console.error('Failed to initialize auth:', error);
+        console.error('Authentication check failed:', error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    initAuth();
+    checkAuth();
   }, []);
 
-  const getUserInfo = async () => {
-    if (!web3auth.connected) return;
-
+  const login = async (email: string, password: string) => {
     try {
-      // Get user info from Web3Auth
-      const w3aUserInfo = await web3auth.getUserInfo();
-      const idToken = await web3auth.authenticateUser();
+      setIsLoading(true);
+      
+      // In a real application, you would send these credentials to the server
+      // For demo purposes, we'll just create a mock API key
+      const apiKey = 'demo_' + Math.random().toString(36).substring(2, 15);
+      localStorage.setItem('apiKey', apiKey);
 
-      // Get or verify user info with our backend
+      // Fetch user info with the new API key
       const response = await fetch(`${API_BASE_URL}/auth/validate`, {
         headers: {
-          'Authorization': `Bearer ${idToken.idToken}`,
+          'Authorization': `ApiKey ${apiKey}`,
         },
       });
 
       if (response.ok) {
-        const data = await response.json() as {
-          valid: boolean;
-          user_id: string;
-          role: UserRole;
-          user_info: {
-            name: string;
-            email: string;
-          };
-        };
+        const data = await response.json();
         setUserInfo({
-          id: w3aUserInfo.idToken || '',
-          email: w3aUserInfo.email || '',
-          name: w3aUserInfo.name || '',
-          profileImage: w3aUserInfo.profileImage || '',
+          id: data.user_id,
+          email: data.user_info.email,
+          name: data.user_info.name,
           blockchainId: data.user_id,
           role: data.role,
         });
+        setIsLoggedIn(true);
       } else {
-        // If user doesn't exist in our system, we need to register them
-        console.log('User not found in backend, registration needed');
-        setUserInfo(null);
+        throw new Error('Login failed');
       }
     } catch (error) {
-      console.error('Failed to get user info:', error);
-      setUserInfo(null);
+      console.error('Login failed:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const login = async () => {
+  const register = async (name: string, email: string, password: string, role: UserRole) => {
     try {
       setIsLoading(true);
-      const web3authProvider = await web3auth.connect();
-      setProvider(web3authProvider);
+      
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, role }),
+      });
 
-      await getUserInfo();
-
-      // If no user info was retrieved, user needs to be registered
-      if (!userInfo) {
-        // Open role selection modal or redirect to registration
-        console.log("Redirect to registration");
-        // Implementation depends on your UI flow
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Registration failed');
       }
 
+      const data = await response.json();
+      
+      // Save the API key
+      localStorage.setItem('apiKey', data.api_key);
+      
+      // Auto-login after registration
+      setUserInfo({
+        id: data.user_id,
+        email: email,
+        name: name,
+        blockchainId: data.blockchain_id,
+        role: role,
+      });
+      
       setIsLoggedIn(true);
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('Registration failed:', error);
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -149,8 +149,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const logout = async () => {
     try {
-      await web3auth.logout();
-      setProvider(null);
+      localStorage.removeItem('apiKey');
       setUserInfo(null);
       setIsLoggedIn(false);
     } catch (error) {
@@ -158,18 +157,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getAuthHeader = async () => {
-    if (!web3auth.connected) return null;
-
-    try {
-      const idToken = await web3auth.authenticateUser();
-      return {
-        'Authorization': `Bearer ${idToken.idToken}`
-      };
-    } catch (error) {
-      console.error('Failed to get auth header:', error);
-      return null;
-    }
+  const getAuthHeader = () => {
+    const apiKey = localStorage.getItem('apiKey');
+    if (!apiKey) return null;
+    
+    return {
+      'Authorization': `ApiKey ${apiKey}`
+    };
   };
 
   return (
@@ -177,8 +171,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isLoggedIn,
       isLoading,
       userInfo,
-      provider,
       login,
+      register,
       logout,
       getAuthHeader,
     }}>
@@ -197,32 +191,19 @@ export const useAuth = () => {
 
 // Registration component
 export const UserRegistration = () => {
-  const { userInfo } = useAuth();
+  const { register, userInfo } = useAuth();
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>('patient');
   const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
 
-  const registerUser = async () => {
+  const handleRegister = async () => {
     try {
       setIsRegistering(true);
-      const idToken = await web3auth.authenticateUser();
-
-      const response = await fetch(`${API_BASE_URL}/auth/register`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken.idToken}`,
-        },
-        body: JSON.stringify({ idToken: idToken.idToken, role }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Registration failed');
-      }
-
-      // Refresh user info after registration
-      window.location.reload();
+      await register(name, email, password, role);
+      // Registration successful and auto-logged in via the register function
     } catch (error) {
       setError(error.message || 'Registration failed');
       console.error('Registration error:', error);
@@ -238,9 +219,40 @@ export const UserRegistration = () => {
   return (
     <div className="registration-container">
       <h2>Complete Your Registration</h2>
-      <p>Please select your role in the healthcare system:</p>
+      
+      <div className="form-group">
+        <label>Name</label>
+        <input
+          type="text"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Your name"
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Email</label>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Your email"
+        />
+      </div>
+      
+      <div className="form-group">
+        <label>Password</label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Your password"
+        />
+      </div>
 
       <div className="role-selection">
+        <p>Please select your role in the healthcare system:</p>
+        
         <label>
           <input
             type="radio"
@@ -267,7 +279,7 @@ export const UserRegistration = () => {
       {error && <div className="error">{error}</div>}
 
       <button
-        onClick={registerUser}
+        onClick={handleRegister}
         disabled={isRegistering}
       >
         {isRegistering ? 'Registering...' : 'Complete Registration'}

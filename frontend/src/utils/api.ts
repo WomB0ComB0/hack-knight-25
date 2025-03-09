@@ -7,12 +7,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
  * Wrapper for fetch that includes authorization headers
  */
 export const fetchWithAuth = async (url: string, options: RequestInit = {}) => {
-  const { getAuthHeader } = useAuth();
-  const authHeader = await getAuthHeader();
+  // Get the authentication header from localStorage directly
+  // This ensures the function works outside of React components
+  const apiKey = localStorage.getItem('apiKey');
   
-  if (!authHeader) {
+  if (!apiKey) {
     throw new Error('Not authenticated');
   }
+  
+  const authHeader = { 'Authorization': `ApiKey ${apiKey}` };
   
   const response = await fetch(`${API_BASE_URL}${url}`, {
     ...options,

@@ -79,7 +79,7 @@ def authorize_healthcare_access(f):
             return f(*args, **kwargs)
 
         try:
-            # Validate the Web3Auth token
+            # Validate the API key
             user_id, role, user_info = validate_auth_header(auth_header)
 
             # Attach user info to the request for use in route handlers
@@ -518,24 +518,16 @@ def manage_consent():
         return jsonify({"error": f"Error processing consent: {str(e)}"}), 500
 
 
-# Add new endpoint for registering Web3Auth users
+# Add a simplified endpoint for user registration
 @app.route("/auth/register", methods=["POST"])
-@validate_json_request(required_fields=["idToken", "role"])
+@validate_json_request(required_fields=["name", "role"])
 def register_user():
     values = request.get_json()
-    id_token = values.get("idToken")
+    name = values.get("name")
     requested_role = values.get("role")
+    email = values.get("email", "")
 
     try:
-        from blockchain.auth_service import verify_web3auth_token, USER_STORE
-
-        # Verify the token
-        user_info = verify_web3auth_token(id_token)
-        user_id = user_info.get("sub")
-
-        if not user_id:
-            return jsonify({"error": "Invalid token - missing user ID"}), 400
-
         # Validate requested role
         if requested_role not in ["patient", "healthcare_provider"]:
             return (
@@ -547,17 +539,21 @@ def register_user():
                 400,
             )
 
-        # Generate a blockchain ID from the user's Web3Auth public key
-        blockchain_id = user_info.get("wallets", {}).get("public_key", user_id)
+        # Create a unique user ID
+        user_id = str(uuid4())
+        blockchain_id = str(uuid4()).replace("-", "")
 
-        # Update or create user
+        # Store the user
         USER_STORE[user_id] = {
             "role": requested_role,
             "blockchain_id": blockchain_id,
-            "name": user_info.get("name", "Anonymous"),
-            "email": user_info.get("email", ""),
+            "name": name,
+            "email": email,
             "created_at": time.time(),
         }
+
+        # Generate an API key (this would be more secure in a real application)
+        api_key = str(uuid4()).replace("-", "")
 
         return (
             jsonify(
@@ -566,19 +562,18 @@ def register_user():
                     "user_id": user_id,
                     "blockchain_id": blockchain_id,
                     "role": requested_role,
+                    "api_key": api_key,
                 }
             ),
             201,
         )
 
-    except AuthError as e:
-        return jsonify({"error": str(e)}), 401
     except Exception as e:
         logger.error(f"User registration error: {str(e)}")
         return jsonify({"error": f"Error during user registration: {str(e)}"}), 500
 
 
-# Add endpoint to validate authentication
+# Simplified endpoint to validate authentication
 @app.route("/auth/validate", methods=["GET"])
 def validate_auth():
     auth_header = request.headers.get("Authorization")
@@ -589,7 +584,7 @@ def validate_auth():
         return (
             jsonify(
                 {
-                    "valid": True,  # Test endpoint for development - remove in production
+                    "valid": True,
                     "user_id": user_id,
                     "role": role,
                     "user_info": {
