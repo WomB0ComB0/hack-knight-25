@@ -1,4 +1,3 @@
-import { Providers } from "@/providers";
 import "@/styles/tailwind.css";
 
 export default function RootLayout({
@@ -9,7 +8,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <Providers>{children}</Providers>
+        <>{children}</>
       </body>
     </html>
   );
