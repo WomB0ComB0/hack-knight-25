@@ -375,22 +375,22 @@ export default function Home() {
               <h3 className="text-sm font-semibold uppercase tracking-wider">Product</h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Features
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Security
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     For Patients
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     For Providers
                   </a>
                 </li>
@@ -400,22 +400,22 @@ export default function Home() {
               <h3 className="text-sm font-semibold uppercase tracking-wider">Company</h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     About
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Blog
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Careers
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Contact
                   </a>
                 </li>
@@ -425,22 +425,22 @@ export default function Home() {
               <h3 className="text-sm font-semibold uppercase tracking-wider">Legal</h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Privacy
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Terms
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     HIPAA
                   </a>
                 </li>
                 <li>
-                  <a href="#" className="text-gray-400 transition-colors hover:text-white">
+                  <a href="." className="text-gray-400 transition-colors hover:text-white">
                     Security
                   </a>
                 </li>
