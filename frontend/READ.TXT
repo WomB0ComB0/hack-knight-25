@@ -1,0 +1,55 @@
+# Hack Knight Backend Documentation
+
+This document covers the backend, a Python-based server application that handles API endpoints, server-side logic, and other services. All dependencies are managed via `requirements.txt`, and a startup script (`start.sh`) is provided.
+
+### Table of Contents
+- [Setup](#setup)
+- [Running the Backend](#running-the-backend)
+- [File Structure](#file-structure)
+- [Troubleshooting](#troubleshooting)
+- [Additional Resources](#additional-resources)
+
+### Setup
+
+1. **Create a Virtual Environment**
+   ```bash
+   python3 -m venv env
+Activate the Virtual Environment
+
+macOS/Linux:
+Bash
+
+-source env/bin/activate
+-Windows:
+-Bash
+
+-.\env\Scripts\activate
+-Install Dependencies
+
+-Bash
+
+-pip install -r requirements.txt
+-Running the Backend
+-Using the Startup Script:
+
+-Bash
+
+-sh start.sh
+-Direct Execution: Alternatively, run the main Python file directly (adjust the filename if necessary):
+
+-Bash
+
+-python main.py
+-File Structure
+-requirements.txt – Lists Python dependencies.
+-start.sh – Script to start the server.
+-Other Python modules and packages implementing the backend logic.
+-Troubleshooting
+-Environment Issues: Activate the virtual environment before installing dependencies.
+-Dependency Problems: Verify you're using the correct Python version.
+
+-Port Conflicts: Check for port conflicts if the server fails to start.
+-Additional Resources
+-Python Documentation
+-Flask Documentation (if using Flask)
+-Django Documentation (if using Django)
