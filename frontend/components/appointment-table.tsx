@@ -252,4 +252,3 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
     </div>
   )
 }
-

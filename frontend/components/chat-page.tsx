@@ -123,8 +123,8 @@ export function ChatPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
-      <div className="flex items-center justify-between p-4 border-b bg-white">
+    <div className="flex h-screen flex-col bg-gray-50">
+      <div className="flex items-center justify-between border-b bg-white p-4">
         <h1 className="text-xl font-semibold">Messages</h1>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -140,7 +140,7 @@ export function ChatPage() {
         </DropdownMenu>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -149,24 +149,24 @@ export function ChatPage() {
             <img
               src={message.sender.avatar || "/placeholder.svg"}
               alt={message.sender.name}
-              className="w-10 h-10 rounded-full"
+              className="h-10 w-10 rounded-full"
             />
-            <div className={`flex flex-col max-w-[70%] ${message.sender.role === "patient" ? "items-end" : ""}`}>
-              <div className="flex items-center gap-2 mb-1">
+            <div className={`flex max-w-[70%] flex-col ${message.sender.role === "patient" ? "items-end" : ""}`}>
+              <div className="mb-1 flex items-center gap-2">
                 <span className="text-sm font-medium">{message.sender.name}</span>
                 <span className="text-xs text-gray-500">{formatDate(message.timestamp)}</span>
               </div>
               <div
-                className={`relative group rounded-lg p-3 ${
-                  message.sender.role === "patient" ? "bg-blue-600 text-white" : "bg-white border"
+                className={`group relative rounded-lg p-3 ${
+                  message.sender.role === "patient" ? "bg-blue-600 text-white" : "border bg-white"
                 }`}
               >
                 {message.content}
                 <Button
                   variant="ghost"
                   size="icon"
-                  className={`absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity ${
-                    message.sender.role === "patient" ? "left-auto -right-8" : ""
+                  className={`absolute -left-8 top-1/2 -translate-y-1/2 opacity-0 transition-opacity group-hover:opacity-100 ${
+                    message.sender.role === "patient" ? "-right-8 left-auto" : ""
                   }`}
                   onClick={() => handleDelete(message.id)}
                 >
@@ -178,7 +178,7 @@ export function ChatPage() {
         ))}
       </div>
 
-      <div className="p-4 border-t bg-white">
+      <div className="border-t bg-white p-4">
         <div className="flex gap-2">
           <Input
             placeholder="Type a message..."
@@ -199,4 +199,3 @@ export function ChatPage() {
     </div>
   )
 }
-

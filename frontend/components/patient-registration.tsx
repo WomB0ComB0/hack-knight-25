@@ -185,7 +185,7 @@ export function PatientRegistration() {
             <div className="space-y-2">
               <Label>Additional Documents</Label>
               <div
-                className={`border-2 border-dashed rounded-md p-4 text-center ${
+                className={`rounded-md border-2 border-dashed p-4 text-center ${
                   isDragging ? "border-blue-500 bg-blue-50" : "border-gray-300"
                 }`}
                 onDragOver={handleDragOver}
@@ -193,10 +193,10 @@ export function PatientRegistration() {
                 onDrop={handleDrop}
               >
                 <input type="file" id="documents" multiple className="hidden" onChange={handleFileChange} />
-                <label htmlFor="documents" className="flex flex-col items-center cursor-pointer">
-                  <Upload className="h-8 w-8 text-gray-400 mb-2" />
+                <label htmlFor="documents" className="flex cursor-pointer flex-col items-center">
+                  <Upload className="mb-2 h-8 w-8 text-gray-400" />
                   <span className="text-sm font-medium">Drag and drop files here or click to browse</span>
-                  <span className="text-xs text-gray-500 mt-1">
+                  <span className="mt-1 text-xs text-gray-500">
                     Upload medical records, insurance cards, or ID documents
                   </span>
                 </label>
@@ -209,12 +209,12 @@ export function PatientRegistration() {
                     {uploadedFiles.map((file) => (
                       <div
                         key={file.id}
-                        className="flex items-center justify-between p-2 bg-gray-50 rounded-md text-sm"
+                        className="flex items-center justify-between rounded-md bg-gray-50 p-2 text-sm"
                       >
                         <div className="flex items-center">
-                          <File className="h-4 w-4 text-blue-500 mr-2" />
-                          <div className="truncate max-w-[200px]">{file.name}</div>
-                          <div className="text-gray-500 ml-2">({formatFileSize(file.size)})</div>
+                          <File className="mr-2 h-4 w-4 text-blue-500" />
+                          <div className="max-w-[200px] truncate">{file.name}</div>
+                          <div className="ml-2 text-gray-500">({formatFileSize(file.size)})</div>
                         </div>
                         <button
                           type="button"
@@ -241,4 +241,3 @@ export function PatientRegistration() {
     </div>
   )
 }
-

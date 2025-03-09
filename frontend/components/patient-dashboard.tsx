@@ -85,7 +85,7 @@ export function PatientDashboard() {
   return (
     <div className="flex h-screen bg-gray-50">
       <NavigationSidebar onLogout={handleLogout} />
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
         <main className="flex-1 overflow-y-auto p-6">
           <div className="mb-8">
@@ -95,7 +95,7 @@ export function PatientDashboard() {
               onDeleteAppointment={handleDeleteAppointment}
             />
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <DataAccessCard />
             <HealthSummaryCard />
           </div>
@@ -104,4 +104,3 @@ export function PatientDashboard() {
     </div>
   )
 }
-

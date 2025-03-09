@@ -43,7 +43,7 @@ export function LoginSelection() {
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <h1 className="text-2xl font-bold text-center">MedChain</h1>
+          <h1 className="text-center text-2xl font-bold">MedChain</h1>
           <p className="mb-4 text-center text-sm text-gray-500">Secure blockchain healthcare data management</p>
 
           <Button className="w-full bg-blue-600 hover:bg-blue-700" onClick={handlePatientLogin} disabled={isLoading}>
@@ -62,4 +62,3 @@ export function LoginSelection() {
     </div>
   )
 }
-

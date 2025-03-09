@@ -94,7 +94,7 @@ export function NavigationSidebar({ onLogout }: NavigationSidebarProps) {
         />
         <Button
           variant="outline"
-          className={cn("w-full mt-2", collapsed ? "justify-center px-0" : "justify-start")}
+          className={cn("mt-2 w-full", collapsed ? "justify-center px-0" : "justify-start")}
           onClick={onLogout || (() => router.push("/"))}
         >
           {collapsed ? "Exit" : "Log out"}
@@ -103,4 +103,3 @@ export function NavigationSidebar({ onLogout }: NavigationSidebarProps) {
     </div>
   )
 }
-

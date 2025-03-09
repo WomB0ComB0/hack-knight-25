@@ -9,4 +9,3 @@ export interface Appointment {
   smartContractKey?: string
   avatar: string
 }
-

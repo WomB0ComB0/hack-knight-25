@@ -43,7 +43,7 @@ export function Header() {
               <Button variant="ghost" size="icon" className="relative">
                 <Bell className="h-5 w-5" />
                 {notifications.length > 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-blue-600 text-xs text-white">
                     {notifications.length}
                   </span>
                 )}
@@ -92,4 +92,3 @@ export function Header() {
     </header>
   )
 }
-

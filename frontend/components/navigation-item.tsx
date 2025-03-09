@@ -20,7 +20,7 @@ export function NavigationItem({ icon: Icon, label, active = false, collapsed = 
       className={cn(
         "w-full",
         collapsed ? "justify-center px-0" : "justify-start",
-        active ? "bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800" : "",
+        active ? "bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800" : ""
       )}
       onClick={onClick}
     >
@@ -42,4 +42,3 @@ export function NavigationItem({ icon: Icon, label, active = false, collapsed = 
 
   return button
 }
-
