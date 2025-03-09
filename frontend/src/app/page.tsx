@@ -1,7 +1,8 @@
-// import { LoginSelection } from "@/components/login-selection"
-"use client"
-import type React from "react"
-import { useRef } from "react"
+"use client";
+
+import type React from "react";
+import { useRef } from "react";
+import { useRouter } from "next/navigation";
 import {
   Shield,
   Users,
@@ -16,16 +17,24 @@ import {
   MapPin,
   ChevronDown,
   CheckCircle2,
-} from "lucide-react"
+} from "lucide-react";
 
 export default function Home() {
-  const aboutRef = useRef<HTMLDivElement>(null)
-  const featuresRef = useRef<HTMLDivElement>(null)
-  const contactRef = useRef<HTMLDivElement>(null)
+  const aboutRef = useRef<HTMLDivElement>(null);
+  const featuresRef = useRef<HTMLDivElement>(null);
+  const contactRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
-    ref.current?.scrollIntoView({ behavior: "smooth" })
-  }
+    ref.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollDown = () => {
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: "smooth",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
@@ -35,7 +44,9 @@ export default function Home() {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <Activity className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-xl font-bold text-gray-900">MedChain</span>
+              <span className="ml-2 text-xl font-bold text-gray-900">
+                MedChain
+              </span>
             </div>
             <div className="flex space-x-4">
               <button
@@ -79,12 +90,14 @@ export default function Home() {
               <span className="text-blue-600"> Your Control</span>
             </h1>
             <p className="mx-auto mb-10 max-w-2xl text-xl text-gray-600">
-              MedChain empowers patients with complete control over their health records while enabling secure data
-              sharing with healthcare providers.
+              MedChain empowers patients with complete control over their health
+              records while enabling secure data sharing with healthcare
+              providers.
             </p>
             <div className="flex justify-center space-x-4">
               <button
                 type="button"
+                onClick={scrollDown}
                 className="flex items-center rounded-lg bg-blue-600 px-8 py-4 text-white transition-colors hover:bg-blue-700"
               >
                 Get Started
@@ -92,7 +105,7 @@ export default function Home() {
               </button>
               <button
                 type="button"
-                onClick={() => scrollToSection(aboutRef)}
+                onClick={() => router.push("/dashboard")}
                 className="group rounded-lg border-2 border-blue-600 px-8 py-4 text-blue-600 transition-colors hover:bg-blue-50"
               >
                 Learn More
@@ -110,7 +123,8 @@ export default function Home() {
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold text-gray-900">About MedChain</h2>
             <p className="mt-4 text-xl text-gray-600">
-              Revolutionizing healthcare data management through blockchain technology
+              Revolutionizing healthcare data management through blockchain
+              technology
             </p>
           </div>
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
@@ -118,24 +132,36 @@ export default function Home() {
               <div className="flex items-start space-x-4">
                 <CheckCircle2 className="mt-1 h-6 w-6 text-green-500" />
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Blockchain Security</h3>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Blockchain Security
+                  </h3>
                   <p className="text-gray-600">
-                    Your medical records are encrypted and stored on a secure blockchain network.
+                    Your medical records are encrypted and stored on a secure
+                    blockchain network.
                   </p>
                 </div>
               </div>
               <div className="flex items-start space-x-4">
                 <CheckCircle2 className="mt-1 h-6 w-6 text-green-500" />
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Smart Contracts</h3>
-                  <p className="text-gray-600">Automated access control through blockchain smart contracts.</p>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    Smart Contracts
+                  </h3>
+                  <p className="text-gray-600">
+                    Automated access control through blockchain smart contracts.
+                  </p>
                 </div>
               </div>
               <div className="flex items-start space-x-4">
                 <CheckCircle2 className="mt-1 h-6 w-6 text-green-500" />
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-900">HIPAA Compliant</h3>
-                  <p className="text-gray-600">Fully compliant with healthcare privacy regulations and standards.</p>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    HIPAA Compliant
+                  </h3>
+                  <p className="text-gray-600">
+                    Fully compliant with healthcare privacy regulations and
+                    standards.
+                  </p>
                 </div>
               </div>
             </div>
@@ -152,19 +178,27 @@ export default function Home() {
       </div>
 
       {/* Features Section */}
-      <div ref={featuresRef} className="bg-gradient-to-b from-gray-50 to-white py-20">
+      <div
+        ref={featuresRef}
+        className="bg-gradient-to-b from-gray-50 to-white py-20"
+      >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
-            <h2 className="text-3xl font-bold text-gray-900">Why Choose MedChain?</h2>
+            <h2 className="text-3xl font-bold text-gray-900">
+              Why Choose MedChain?
+            </h2>
             <p className="mt-4 text-xl text-gray-600">
-              Comprehensive features designed for patients and healthcare providers
+              Comprehensive features designed for patients and healthcare
+              providers
             </p>
           </div>
           <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
             <div className="rounded-xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
               <Shield className="mb-4 h-12 w-12 text-blue-600" />
               <h3 className="mb-2 text-xl font-semibold">Complete Control</h3>
-              <p className="mb-4 text-gray-600">You decide who can access your medical records and for how long.</p>
+              <p className="mb-4 text-gray-600">
+                You decide who can access your medical records and for how long.
+              </p>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li className="flex items-center">
                   <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
@@ -184,7 +218,8 @@ export default function Home() {
               <Lock className="mb-4 h-12 w-12 text-blue-600" />
               <h3 className="mb-2 text-xl font-semibold">Secure Sharing</h3>
               <p className="mb-4 text-gray-600">
-                Blockchain-powered security ensures your data remains private and encrypted.
+                Blockchain-powered security ensures your data remains private
+                and encrypted.
               </p>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li className="flex items-center">
@@ -204,7 +239,9 @@ export default function Home() {
             <div className="rounded-xl bg-white p-6 shadow-lg transition-shadow hover:shadow-xl">
               <Users className="mb-4 h-12 w-12 text-blue-600" />
               <h3 className="mb-2 text-xl font-semibold">Easy Collaboration</h3>
-              <p className="mb-4 text-gray-600">Seamlessly share records with healthcare providers when needed.</p>
+              <p className="mb-4 text-gray-600">
+                Seamlessly share records with healthcare providers when needed.
+              </p>
               <ul className="space-y-2 text-sm text-gray-500">
                 <li className="flex items-center">
                   <CheckCircle2 className="mr-2 h-4 w-4 text-green-500" />
@@ -229,7 +266,9 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold text-gray-900">How It Works</h2>
-            <p className="mt-4 text-xl text-gray-600">Simple and secure process for managing your health data</p>
+            <p className="mt-4 text-xl text-gray-600">
+              Simple and secure process for managing your health data
+            </p>
           </div>
           <div className="grid grid-cols-1 items-center gap-12 md:grid-cols-2">
             <div className="space-y-8">
@@ -240,7 +279,8 @@ export default function Home() {
                 <div>
                   <h3 className="mb-2 text-xl font-semibold">Patient Portal</h3>
                   <p className="text-gray-600">
-                    Access and manage your complete medical history in one secure location.
+                    Access and manage your complete medical history in one
+                    secure location.
                   </p>
                 </div>
               </div>
@@ -250,7 +290,10 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="mb-2 text-xl font-semibold">Grant Access</h3>
-                  <p className="text-gray-600">Easily provide temporary access to healthcare providers when needed.</p>
+                  <p className="text-gray-600">
+                    Easily provide temporary access to healthcare providers when
+                    needed.
+                  </p>
                 </div>
               </div>
               <div className="relative flex items-center">
@@ -259,7 +302,10 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="mb-2 text-xl font-semibold">Provider View</h3>
-                  <p className="text-gray-600">Doctors can securely access relevant patient data with permission.</p>
+                  <p className="text-gray-600">
+                    Doctors can securely access relevant patient data with
+                    permission.
+                  </p>
                 </div>
               </div>
             </div>
@@ -280,7 +326,9 @@ export default function Home() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-16 text-center">
             <h2 className="text-3xl font-bold text-gray-900">Contact Us</h2>
-            <p className="mt-4 text-xl text-gray-600">Get in touch with our team for support or inquiries</p>
+            <p className="mt-4 text-xl text-gray-600">
+              Get in touch with our team for support or inquiries
+            </p>
           </div>
           <div className="grid grid-cols-1 gap-12 md:grid-cols-2">
             <div className="space-y-8">
@@ -290,7 +338,9 @@ export default function Home() {
                 </div>
                 <div>
                   <h3 className="text-lg font-medium text-gray-900">Email</h3>
-                  <p className="mt-1 text-gray-600">support@medchain.example.com</p>
+                  <p className="mt-1 text-gray-600">
+                    support@medchain.example.com
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -307,7 +357,9 @@ export default function Home() {
                   <MapPin className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900">Location</h3>
+                  <h3 className="text-lg font-medium text-gray-900">
+                    Location
+                  </h3>
                   <p className="mt-1 text-gray-600">
                     123 Health Street, Medical District
                     <br />
@@ -318,7 +370,10 @@ export default function Home() {
             </div>
             <form className="space-y-6">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Name
                 </label>
                 <input
@@ -328,7 +383,10 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Email
                 </label>
                 <input
@@ -338,7 +396,10 @@ export default function Home() {
                 />
               </div>
               <div>
-                <label htmlFor="message" className="block text-sm font-medium text-gray-700">
+                <label
+                  htmlFor="message"
+                  className="block text-sm font-medium text-gray-700"
+                >
                   Message
                 </label>
                 <textarea
@@ -368,79 +429,122 @@ export default function Home() {
                 <span className="ml-2 text-lg font-semibold">MedChain</span>
               </div>
               <p className="mt-4 text-gray-400">
-                Secure, transparent, and patient-controlled healthcare data management.
+                Secure, transparent, and patient-controlled healthcare data
+                management.
               </p>
             </div>
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider">Product</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider">
+                Product
+              </h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Features
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Security
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     For Patients
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     For Providers
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider">Company</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider">
+                Company
+              </h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     About
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Blog
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Careers
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Contact
                   </a>
                 </li>
               </ul>
             </div>
             <div>
-              <h3 className="text-sm font-semibold uppercase tracking-wider">Legal</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wider">
+                Legal
+              </h3>
               <ul className="mt-4 space-y-2">
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Privacy
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Terms
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     HIPAA
                   </a>
                 </li>
                 <li>
-                  <a href="." className="text-gray-400 transition-colors hover:text-white">
+                  <a
+                    href="."
+                    className="text-gray-400 transition-colors hover:text-white"
+                  >
                     Security
                   </a>
                 </li>
@@ -448,10 +552,12 @@ export default function Home() {
             </div>
           </div>
           <div className="mt-12 border-t border-gray-800 pt-8">
-            <p className="text-center text-gray-400">© 2025 MedChain. All rights reserved.</p>
+            <p className="text-center text-gray-400">
+              © 2025 MedChain. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>
     </div>
-  )
+  );
 }
