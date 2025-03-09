@@ -25,8 +25,13 @@ export default function Home() {
   const contactRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
-  const scrollToSection = (ref: React.RefObject<HTMLDivElement | null>) => {
-    ref.current?.scrollIntoView({ behavior: "smooth" });
+  const scrollToSection = (ref: React.RefObject<HTMLDivElement>) => {
+    if (ref.current) {
+      ref.current.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
   };
 
   const scrollDown = () => {
