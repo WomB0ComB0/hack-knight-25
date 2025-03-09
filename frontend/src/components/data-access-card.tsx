@@ -1,6 +1,13 @@
-import { Lock, Shield, UserCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Lock, Shield, UserCheck } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function DataAccessCard() {
   return (
@@ -10,7 +17,9 @@ export function DataAccessCard() {
           <Lock className="h-5 w-5 text-blue-600" />
           Data Access Control
         </CardTitle>
-        <CardDescription>Manage who can access your medical data</CardDescription>
+        <CardDescription>
+          Manage who can access your medical data
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
@@ -53,5 +62,5 @@ export function DataAccessCard() {
         <Button className="w-full">Manage Data Access</Button>
       </CardFooter>
     </Card>
-  )
+  );
 }
