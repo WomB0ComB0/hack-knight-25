@@ -1,5 +1,5 @@
 {
-  "name": "my-v0-project",
+  "name": "hack-knight-25",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -140,9 +140,6 @@
     "tsc": "^2.0.4",
     "typescript": "^5",
     "webpack": "5.89.0"
-  },
-  "engines": {
-    "node": ">=20.0.0"
   },
   "packageManager": "bun@1.2.4"
 }
