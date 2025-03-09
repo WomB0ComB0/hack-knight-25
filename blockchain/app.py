@@ -1,10 +1,9 @@
 import time
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request
 from uuid import uuid4
-import json
 from functools import wraps
 import logging
-from typing import Dict, List, Union, Optional, Callable
+from typing import List, Optional, Callable
 import os
 
 from blockchain.blockchain import Blockchain, MINING_SENDER, MINING_REWARD, RECORD_TYPES
@@ -26,25 +25,24 @@ node_identifier = str(uuid4()).replace("-", "")
 DEV_API_KEY = os.environ.get("DEV_API_KEY", "dev-api-key-for-testing")
 DEV_MODE = os.environ.get("FLASK_ENV") == "development"
 
+# In-memory user store for the simplified demo
+USER_STORE = {}
 
-# Request validation decorator
+
 def validate_json_request(required_fields: Optional[List[str]] = None) -> Callable:
-
+    """Decorator to validate JSON requests and required fields."""
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
-            # Check if request has JSON data
             if not request.is_json:
                 return jsonify({"error": "Request must be JSON"}), 400
 
-            # Get JSON data
             try:
                 request_data = request.get_json()
             except Exception as e:
                 logger.error(f"Invalid JSON: {str(e)}")
                 return jsonify({"error": "Invalid JSON format"}), 400
 
-            # Check for required fields if specified
             if required_fields:
                 missing_fields = [
                     field for field in required_fields if field not in request_data
@@ -63,11 +61,10 @@ def validate_json_request(required_fields: Optional[List[str]] = None) -> Callab
     return decorator
 
 
-# Healthcare specific authorization decorator
 def authorize_healthcare_access(f):
+    """Decorator to validate healthcare access authorization."""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Get authentication token from header
         auth_header = request.headers.get("Authorization")
 
         # Check for dev mode API key
@@ -110,32 +107,28 @@ def internal_error(error):
 
 @app.route("/", methods=["GET"])
 def home():
-
-    return (
-        jsonify(
-            {
-                "message": "Blockchain API is running",
-                "status": "success",
-                "version": "1.0",
-                "endpoints": {
-                    "GET /": "Home - This information",
-                    "GET /chain": "Get the full blockchain",
-                    "GET /mine": "Mine a new block",
-                    "POST /transactions/new": "Create a new transaction",
-                    "GET /transactions/pending": "Get pending transactions",
-                    "POST /nodes/register": "Register new nodes",
-                    "GET /nodes/resolve": "Resolve conflicts between nodes",
-                    "GET /nodes/get": "Get registered nodes",
-                },
-            }
-        ),
-        200,
-    )
+    """API homepage with endpoint information."""
+    return jsonify({
+        "message": "Blockchain API is running",
+        "status": "success",
+        "version": "1.0",
+        "endpoints": {
+            "GET /": "Home - This information",
+            "GET /chain": "Get the full blockchain",
+            "GET /mine": "Mine a new block",
+            "POST /transactions/new": "Create a new transaction",
+            "GET /transactions/pending": "Get pending transactions",
+            "POST /nodes/register": "Register new nodes",
+            "GET /nodes/resolve": "Resolve conflicts between nodes",
+            "GET /nodes/get": "Get registered nodes",
+        },
+    }), 200
 
 
 @app.route("/transactions/new", methods=["POST"])
 @validate_json_request(required_fields=["sender", "recipient", "amount", "signature"])
 def new_transaction():
+    """Create a new transaction in the blockchain."""
     values = request.get_json()
 
     # Validate amount
@@ -174,54 +167,46 @@ def new_transaction():
         }
         logger.info(f"New transaction: {sender} -> {recipient}, {amount}")
         return jsonify(response), 201
-    else:
-        return (
-            jsonify({"error": "Invalid transaction - signature verification failed"}),
-            406,
-        )
+
+    return jsonify({"error": "Invalid transaction - signature verification failed"}), 406
 
 
 @app.route("/transactions/pending", methods=["GET"])
 def get_pending_transactions():
-    return (
-        jsonify(
-            {
-                "pending_transactions": blockchain.transactions,
-                "count": len(blockchain.transactions),
-            }
-        ),
-        200,
-    )
+    """Get all pending transactions."""
+    return jsonify({
+        "pending_transactions": blockchain.transactions,
+        "count": len(blockchain.transactions),
+    }), 200
 
 
 @app.route("/chain", methods=["GET"])
 def full_chain():
+    """Get the full blockchain with pagination support."""
     # Optional query parameter for pagination
     start = request.args.get("start", default=0, type=int)
     limit = request.args.get("limit", default=len(blockchain.chain), type=int)
 
     # Validate pagination parameters
-    if start < 0:
-        start = 0
-    if limit < 1:
-        limit = 1
+    start = max(0, start)
+    limit = max(1, limit)
     if start >= len(blockchain.chain):
         start = max(0, len(blockchain.chain) - 1)
 
     chain_slice = blockchain.chain[start : start + limit]
 
-    response = {
+    return jsonify({
         "chain": chain_slice,
         "length": len(blockchain.chain),
         "start": start,
         "limit": limit,
         "returned_blocks": len(chain_slice),
-    }
-    return jsonify(response), 200
+    }), 200
 
 
 @app.route("/mine", methods=["GET"])
 def mine():
+    """Mine a new block and add it to the blockchain."""
     # Ensure there's at least one transaction (the mining reward) to include
     blockchain.submit_transaction(
         MINING_SENDER, node_identifier, MINING_REWARD, signature=""
@@ -256,14 +241,14 @@ def mine():
 @app.route("/nodes/register", methods=["POST"])
 @validate_json_request(required_fields=["nodes"])
 def register_nodes():
-
+    """Register new nodes in the blockchain network."""
     values = request.get_json()
     nodes = values.get("nodes")
 
     if not isinstance(nodes, list):
         return jsonify({"error": "Nodes must be provided as a list"}), 400
 
-    if len(nodes) == 0:
+    if not nodes:
         return jsonify({"error": "Empty nodes list"}), 400
 
     # Register each node
@@ -286,14 +271,13 @@ def register_nodes():
     if failed_nodes:
         response["failed_nodes"] = failed_nodes
 
-    logger.info(
-        f"Registered {len(successful_nodes)} new nodes, {len(failed_nodes)} failed"
-    )
+    logger.info(f"Registered {len(successful_nodes)} new nodes, {len(failed_nodes)} failed")
     return jsonify(response), 201
 
 
 @app.route("/nodes/resolve", methods=["GET"])
 def consensus():
+    """Resolve conflicts between blockchain nodes using consensus algorithm."""
     if not blockchain.nodes:
         return jsonify({"message": "No nodes registered. Nothing to resolve."}), 200
 
@@ -321,24 +305,23 @@ def consensus():
 
 @app.route("/nodes/get", methods=["GET"])
 def get_nodes():
-    response = {"nodes": list(blockchain.nodes), "count": len(blockchain.nodes)}
-    return jsonify(response), 200
+    """Get all registered nodes in the network."""
+    return jsonify({
+        "nodes": list(blockchain.nodes), 
+        "count": len(blockchain.nodes)
+    }), 200
 
 
 @app.route("/block/<int:block_id>", methods=["GET"])
 def get_block(block_id):
+    """Get a specific block by ID."""
     if block_id < 0 or block_id >= len(blockchain.chain):
         return jsonify({"error": f"Block #{block_id} not found"}), 404
 
-    return (
-        jsonify(
-            {
-                "block": blockchain.chain[block_id],
-                "hash": blockchain.hash(blockchain.chain[block_id]),
-            }
-        ),
-        200,
-    )
+    return jsonify({
+        "block": blockchain.chain[block_id],
+        "hash": blockchain.hash(blockchain.chain[block_id]),
+    }), 200
 
 
 # Healthcare-specific endpoints
@@ -348,6 +331,7 @@ def get_block(block_id):
 )
 @authorize_healthcare_access
 def add_medical_record():
+    """Add a new medical record to the blockchain."""
     values = request.get_json()
 
     # Extract values
@@ -359,21 +343,16 @@ def add_medical_record():
 
     # Validate record type
     if record_type not in RECORD_TYPES.values():
-        return (
-            jsonify(
-                {
-                    "error": f"Invalid record type. Must be one of: {', '.join(RECORD_TYPES.values())}"
-                }
-            ),
-            400,
-        )
+        valid_types = ", ".join(RECORD_TYPES.values())
+        return jsonify({
+            "error": f"Invalid record type. Must be one of: {valid_types}"
+        }), 400
 
     # Check authorization (only doctors/providers can add records)
     if request.user_role != "healthcare_provider":
-        return (
-            jsonify({"error": "Only healthcare providers can add medical records"}),
-            403,
-        )
+        return jsonify({
+            "error": "Only healthcare providers can add medical records"
+        }), 403
 
     try:
         # Add the medical record to the blockchain
@@ -396,13 +375,10 @@ def add_medical_record():
             }
             logger.info(f"New medical record: {record_type} for patient {patient_id}")
             return jsonify(response), 201
-        else:
-            return (
-                jsonify(
-                    {"error": "Invalid medical record - signature verification failed"}
-                ),
-                406,
-            )
+
+        return jsonify({
+            "error": "Invalid medical record - signature verification failed"
+        }), 406
 
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -414,6 +390,7 @@ def add_medical_record():
 @app.route("/medical/records/<patient_id>", methods=["GET"])
 @authorize_healthcare_access
 def get_medical_records(patient_id):
+    """Get medical records for a specific patient."""
     record_type = request.args.get("record_type")
 
     # Check authorization:
@@ -431,12 +408,11 @@ def get_medical_records(patient_id):
             patient_id, request.user_id, record_type
         )
 
-        return (
-            jsonify(
-                {"patient_id": patient_id, "records": records, "count": len(records)}
-            ),
-            200,
-        )
+        return jsonify({
+            "patient_id": patient_id, 
+            "records": records, 
+            "count": len(records)
+        }), 200
 
     except Exception as e:
         logger.error(f"Error retrieving medical records: {str(e)}")
@@ -449,6 +425,7 @@ def get_medical_records(patient_id):
 )
 @authorize_healthcare_access
 def manage_consent():
+    """Manage patient consent for medical record access."""
     values = request.get_json()
 
     # Extract values
@@ -460,12 +437,9 @@ def manage_consent():
 
     # Verify that requester is the patient
     if request.user_id != patient_id:
-        return (
-            jsonify(
-                {"error": "Only patients can manage consent for their own records"}
-            ),
-            403,
-        )
+        return jsonify({
+            "error": "Only patients can manage consent for their own records"
+        }), 403
 
     # Validate access type
     if access_type not in ["grant", "revoke"]:
@@ -486,10 +460,7 @@ def manage_consent():
             patient_id,  # patient is the author of this consent
             RECORD_TYPES["CONSENT"],
             consent_data,
-            [
-                patient_id,
-                provider_id,
-            ],  # Both patient and provider can access this consentimport jwt
+            [patient_id, provider_id],  # Both patient and provider can access
             signature,
         )
 
@@ -501,17 +472,12 @@ def manage_consent():
                 "access_type": access_type,
                 "record_types": record_types,
             }
-            logger.info(
-                f"New consent record: {access_type} access for provider {provider_id}"
-            )
+            logger.info(f"New consent record: {access_type} access for provider {provider_id}")
             return jsonify(response), 201
-        else:
-            return (
-                jsonify(
-                    {"error": "Invalid consent record - signature verification failed"}
-                ),
-                406,
-            )
+
+        return jsonify({
+            "error": "Invalid consent record - signature verification failed"
+        }), 406
 
     except Exception as e:
         logger.error(f"Error managing consent: {str(e)}")
@@ -522,6 +488,7 @@ def manage_consent():
 @app.route("/auth/register", methods=["POST"])
 @validate_json_request(required_fields=["name", "role"])
 def register_user():
+    """Register a new user in the system."""
     values = request.get_json()
     name = values.get("name")
     requested_role = values.get("role")
@@ -529,15 +496,11 @@ def register_user():
 
     try:
         # Validate requested role
-        if requested_role not in ["patient", "healthcare_provider"]:
-            return (
-                jsonify(
-                    {
-                        "error": "Invalid role - must be 'patient' or 'healthcare_provider'"
-                    }
-                ),
-                400,
-            )
+        valid_roles = ["patient", "healthcare_provider"]
+        if requested_role not in valid_roles:
+            return jsonify({
+                "error": f"Invalid role - must be one of: {', '.join(valid_roles)}"
+            }), 400
 
         # Create a unique user ID
         user_id = str(uuid4())
@@ -555,18 +518,13 @@ def register_user():
         # Generate an API key (this would be more secure in a real application)
         api_key = str(uuid4()).replace("-", "")
 
-        return (
-            jsonify(
-                {
-                    "message": "User registered successfully",
-                    "user_id": user_id,
-                    "blockchain_id": blockchain_id,
-                    "role": requested_role,
-                    "api_key": api_key,
-                }
-            ),
-            201,
-        )
+        return jsonify({
+            "message": "User registered successfully",
+            "user_id": user_id,
+            "blockchain_id": blockchain_id,
+            "role": requested_role,
+            "api_key": api_key,
+        }), 201
 
     except Exception as e:
         logger.error(f"User registration error: {str(e)}")
@@ -576,25 +534,21 @@ def register_user():
 # Simplified endpoint to validate authentication
 @app.route("/auth/validate", methods=["GET"])
 def validate_auth():
+    """Validate authentication credentials."""
     auth_header = request.headers.get("Authorization")
 
     try:
         user_id, role, user_info = validate_auth_header(auth_header)
 
-        return (
-            jsonify(
-                {
-                    "valid": True,
-                    "user_id": user_id,
-                    "role": role,
-                    "user_info": {
-                        "name": user_info.get("name"),
-                        "email": user_info.get("email"),
-                    },
-                }
-            ),
-            200,
-        )
+        return jsonify({
+            "valid": True,
+            "user_id": user_id,
+            "role": role,
+            "user_info": {
+                "name": user_info.get("name"),
+                "email": user_info.get("email"),
+            },
+        }), 200
 
     except AuthError as e:
         return jsonify({"valid": False, "error": str(e)}), 401
@@ -615,5 +569,5 @@ if __name__ == "__main__":
     host = args.host
     debug = args.debug
 
-    logger.info("Starting blockchain node on %s :%s", host, port)
+    logger.info("Starting blockchain node on %s:%s", host, port)
     app.run(host=host, port=port, debug=debug)
