@@ -1,17 +1,20 @@
+import time
 from flask import Flask, jsonify, request, abort
 from uuid import uuid4
 import json
 from functools import wraps
 import logging
 from typing import Dict, List, Union, Optional, Callable
+import os
 
-from blockchain.blockchain import Blockchain, MINING_SENDER, MINING_REWARD
+from blockchain.blockchain import Blockchain, MINING_SENDER, MINING_REWARD, RECORD_TYPES
+from blockchain.auth_service import validate_auth_header, AuthError
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    handlers=[logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
 
@@ -19,32 +22,14 @@ app = Flask(__name__)
 blockchain = Blockchain()
 node_identifier = str(uuid4()).replace("-", "")
 
+# Development API key for testing - set this as an environment variable
+DEV_API_KEY = os.environ.get("DEV_API_KEY", "dev-api-key-for-testing")
+DEV_MODE = os.environ.get("FLASK_ENV") == "development"
+
+
 # Request validation decorator
 def validate_json_request(required_fields: Optional[List[str]] = None) -> Callable:
-    """
-    Decorator to validate JSON requests and ensure they contain required fields.
 
-    This decorator performs the following validations:
-    1. Checks if the request contains JSON data
-    2. Verifies the JSON format is valid
-    3. Ensures all required fields are present in the JSON payload
-
-    Args:
-        required_fields (List[str], optional): List of field names that must be present
-            in the request JSON. If None, only format validation is performed.
-
-    Returns:
-        Callable: The decorated function if validation passes, otherwise returns
-            an appropriate error response with a 400 status code.
-
-    Example:
-        @app.route('/endpoint', methods=['POST'])
-        @validate_json_request(required_fields=['name', 'email'])
-        def my_endpoint():
-            # Will only execute if the request contains valid JSON with 'name' and 'email' fields
-            data = request.get_json()
-            return jsonify({"success": True})
-    """
     def decorator(f):
         @wraps(f)
         def decorated_function(*args, **kwargs):
@@ -61,14 +46,55 @@ def validate_json_request(required_fields: Optional[List[str]] = None) -> Callab
 
             # Check for required fields if specified
             if required_fields:
-                missing_fields = [field for field in required_fields if field not in request_data]
+                missing_fields = [
+                    field for field in required_fields if field not in request_data
+                ]
                 if missing_fields:
-                    missing_str = ', '.join(missing_fields)
-                    return jsonify({"error": f"Missing required fields: {missing_str}"}), 400
+                    missing_str = ", ".join(missing_fields)
+                    return (
+                        jsonify({"error": f"Missing required fields: {missing_str}"}),
+                        400,
+                    )
 
             return f(*args, **kwargs)
+
         return decorated_function
+
     return decorator
+
+
+# Healthcare specific authorization decorator
+def authorize_healthcare_access(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # Get authentication token from header
+        auth_header = request.headers.get("Authorization")
+
+        # Check for dev mode API key
+        if DEV_MODE and auth_header == f"ApiKey {DEV_API_KEY}":
+            # Set mock values for development
+            request.user_id = "dev-doctor-id"
+            request.user_role = "healthcare_provider"
+            request.user_info = {"name": "Dev Doctor", "email": "dev@example.com"}
+            return f(*args, **kwargs)
+
+        try:
+            # Validate the Web3Auth token
+            user_id, role, user_info = validate_auth_header(auth_header)
+
+            # Attach user info to the request for use in route handlers
+            request.user_id = user_id
+            request.user_role = role
+            request.user_info = user_info
+
+            return f(*args, **kwargs)
+
+        except AuthError as e:
+            logger.error(f"Authentication error: {str(e)}")
+            return jsonify({"error": str(e)}), 401
+
+    return decorated_function
+
 
 # Error handlers
 @app.errorhandler(404)
@@ -81,105 +107,41 @@ def not_found(error):
     """
     return jsonify({"error": "Resource not found"}), 404
 
+
 @app.errorhandler(500)
 def internal_error(error):
-    """
-    Handle 500 Internal Server errors.
-
-    Logs the error details and returns a generic error message to the client.
-
-    Args:
-        error: The exception that triggered the error handler
-
-    Returns:
-        tuple: A JSON response with error message and 500 status code
-    """
     logger.error(f"Internal server error: {str(error)}")
     return jsonify({"error": "Internal server error"}), 500
 
+
 @app.route("/", methods=["GET"])
 def home():
-    """
-    API home endpoint providing basic information about the blockchain service.
 
-    Returns information about the API status, version, and available endpoints
-    to help users understand how to interact with the blockchain service.
-
-    Returns:
-        tuple: JSON response with API information and 200 status code
-
-    Example Response:
-        {
-            "message": "Blockchain API is running",
-            "status": "success",
-            "version": "1.0",
-            "endpoints": {
-                "GET /": "Home - This information",
-                "GET /chain": "Get the full blockchain",
-                ...
+    return (
+        jsonify(
+            {
+                "message": "Blockchain API is running",
+                "status": "success",
+                "version": "1.0",
+                "endpoints": {
+                    "GET /": "Home - This information",
+                    "GET /chain": "Get the full blockchain",
+                    "GET /mine": "Mine a new block",
+                    "POST /transactions/new": "Create a new transaction",
+                    "GET /transactions/pending": "Get pending transactions",
+                    "POST /nodes/register": "Register new nodes",
+                    "GET /nodes/resolve": "Resolve conflicts between nodes",
+                    "GET /nodes/get": "Get registered nodes",
+                },
             }
-        }
-    """
-    return jsonify({
-        "message": "Blockchain API is running",
-        "status": "success",
-        "version": "1.0",
-        "endpoints": {
-            "GET /": "Home - This information",
-            "GET /chain": "Get the full blockchain",
-            "GET /mine": "Mine a new block",
-            "POST /transactions/new": "Create a new transaction",
-            "GET /transactions/pending": "Get pending transactions",
-            "POST /nodes/register": "Register new nodes",
-            "GET /nodes/resolve": "Resolve conflicts between nodes",
-            "GET /nodes/get": "Get registered nodes"
-        }
-    }), 200
+        ),
+        200,
+    )
+
 
 @app.route("/transactions/new", methods=["POST"])
 @validate_json_request(required_fields=["sender", "recipient", "amount", "signature"])
 def new_transaction():
-    """
-    Create a new transaction to be added to the blockchain.
-
-    This endpoint validates transaction details and, if valid, adds the transaction
-    to the pending transactions pool to be included in the next mined block.
-
-    Required JSON payload fields:
-        - sender (str): Address of the transaction sender
-        - recipient (str): Address of the transaction recipient
-        - amount (float): Amount to transfer (must be positive)
-        - signature (str): Digital signature to verify transaction authenticity
-          (Not required for mining reward transactions)
-
-    Returns:
-        tuple: JSON response with transaction details and status code
-            - 201 Created: Transaction accepted
-            - 400 Bad Request: Invalid transaction parameters
-            - 406 Not Acceptable: Signature verification failed
-            - 500 Server Error: Error processing transaction
-
-    Example Request:
-        POST /transactions/new
-        Content-Type: application/json
-
-        {
-            "sender": "sender_address_hash",
-            "recipient": "recipient_address_hash",
-            "amount": 5.0,
-            "signature": "digital_signature_data"
-        }
-
-    Example Success Response:
-        {
-            "message": "Transaction will be added to Block 5",
-            "transaction": {
-                "sender": "sender_address_hash",
-                "recipient": "recipient_address_hash",
-                "amount": 5.0
-            }
-        }
-    """
     values = request.get_json()
 
     # Validate amount
@@ -214,86 +176,35 @@ def new_transaction():
     if transaction_result:
         response = {
             "message": f"Transaction will be added to Block {transaction_result}",
-            "transaction": {
-                "sender": sender,
-                "recipient": recipient,
-                "amount": amount
-            }
+            "transaction": {"sender": sender, "recipient": recipient, "amount": amount},
         }
         logger.info(f"New transaction: {sender} -> {recipient}, {amount}")
         return jsonify(response), 201
     else:
-        return jsonify({"error": "Invalid transaction - signature verification failed"}), 406
+        return (
+            jsonify({"error": "Invalid transaction - signature verification failed"}),
+            406,
+        )
+
 
 @app.route("/transactions/pending", methods=["GET"])
 def get_pending_transactions():
-    """
-    Retrieve all pending transactions waiting to be mined into a block.
+    return (
+        jsonify(
+            {
+                "pending_transactions": blockchain.transactions,
+                "count": len(blockchain.transactions),
+            }
+        ),
+        200,
+    )
 
-    Provides visibility into the current transaction pool that will be included
-    in the next block when mining occurs.
-
-    Returns:
-        tuple: JSON response with pending transactions and 200 status code
-
-    Example Response:
-        {
-            "pending_transactions": [
-                {
-                    "sender": "sender_address_hash",
-                    "recipient": "recipient_address_hash",
-                    "amount": 5.0,
-                    "signature": "digital_signature_data",
-                    "timestamp": 1623825026.744143
-                }
-            ],
-            "count": 1
-        }
-    """
-    return jsonify({
-        "pending_transactions": blockchain.transactions,
-        "count": len(blockchain.transactions)
-    }), 200
 
 @app.route("/chain", methods=["GET"])
 def full_chain():
-    """
-    Retrieve the full blockchain or a paginated subset of blocks.
-
-    Returns the blockchain data with optional pagination support to handle
-    potentially large chains efficiently.
-
-    Query Parameters:
-        - start (int, optional): Starting block index (default: 0)
-        - limit (int, optional): Maximum number of blocks to return (default: entire chain)
-
-    Returns:
-        tuple: JSON response with blockchain data and 200 status code
-
-    Example Request:
-        GET /chain?start=10&limit=5
-
-    Example Response:
-        {
-            "chain": [
-                {
-                    "index": 10,
-                    "timestamp": 1623825026.744143,
-                    "transactions": [...],
-                    "nonce": 42,
-                    "previous_hash": "hash_of_block_9"
-                },
-                ... (up to 5 blocks total)
-            ],
-            "length": 100,
-            "start": 10,
-            "limit": 5,
-            "returned_blocks": 5
-        }
-    """
     # Optional query parameter for pagination
-    start = request.args.get('start', default=0, type=int)
-    limit = request.args.get('limit', default=len(blockchain.chain), type=int)
+    start = request.args.get("start", default=0, type=int)
+    limit = request.args.get("limit", default=len(blockchain.chain), type=int)
 
     # Validate pagination parameters
     if start < 0:
@@ -303,53 +214,20 @@ def full_chain():
     if start >= len(blockchain.chain):
         start = max(0, len(blockchain.chain) - 1)
 
-    chain_slice = blockchain.chain[start:start + limit]
+    chain_slice = blockchain.chain[start : start + limit]
 
     response = {
         "chain": chain_slice,
         "length": len(blockchain.chain),
         "start": start,
         "limit": limit,
-        "returned_blocks": len(chain_slice)
+        "returned_blocks": len(chain_slice),
     }
     return jsonify(response), 200
 
+
 @app.route("/mine", methods=["GET"])
 def mine():
-    """
-    Mine a new block and add it to the blockchain.
-
-    This endpoint performs the proof of work algorithm to find a valid nonce,
-    creates a new block with all pending transactions, and adds it to the chain.
-    A mining reward transaction is automatically included in the block.
-
-    Returns:
-        tuple: JSON response with block details and 200 status code
-              or error message with appropriate status code
-
-    Example Response:
-        {
-            "message": "New Block Forged",
-            "block_number": 5,
-            "transactions": [
-                {
-                    "sender": "MINING",
-                    "recipient": "node_identifier_hash",
-                    "amount": 1.0,
-                    "signature": "",
-                    "timestamp": 1623825026.744143
-                },
-                ... (other transactions)
-            ],
-            "nonce": 12345,
-            "previous_hash": "hash_of_previous_block",
-            "timestamp": 1623825026.744143
-        }
-
-    Note:
-        Mining is computationally intensive and may take time depending on the 
-        difficulty level set in the blockchain implementation.
-    """
     # Ensure there's at least one transaction (the mining reward) to include
     blockchain.submit_transaction(
         MINING_SENDER, node_identifier, MINING_REWARD, signature=""
@@ -372,7 +250,7 @@ def mine():
             "transactions": block["transactions"],
             "nonce": block["nonce"],
             "previous_hash": block["previous_hash"],
-            "timestamp": block["timestamp"]
+            "timestamp": block["timestamp"],
         }
         logger.info(f"New block mined: #{block['index']}")
         return jsonify(response), 200
@@ -380,59 +258,11 @@ def mine():
         logger.error(f"Mining error: {str(e)}")
         return jsonify({"error": f"Error mining new block: {str(e)}"}), 500
 
+
 @app.route("/nodes/register", methods=["POST"])
 @validate_json_request(required_fields=["nodes"])
 def register_nodes():
-    """
-    Register new nodes in the blockchain network.
 
-    This endpoint allows this node to become aware of other nodes in the network,
-    enabling distributed consensus and blockchain synchronization.
-
-    Required JSON payload:
-        - nodes (List[str]): List of node URLs to register (e.g., ["http://192.168.0.5:5000"])
-
-    Returns:
-        tuple: JSON response with registration results and 201 status code
-               or error message with 400 status code
-
-    Example Request:
-        POST /nodes/register
-        Content-Type: application/json
-
-        {
-            "nodes": [
-                "http://192.168.0.5:5000",
-                "http://192.168.0.6:5000"
-            ]
-        }
-
-    Example Success Response:
-        {
-            "message": "Nodes registration completed: 2 succeeded, 0 failed",
-            "total_nodes": [
-                "192.168.0.5:5000",
-                "192.168.0.6:5000"
-            ],
-            "successful_nodes": [
-                "http://192.168.0.5:5000",
-                "http://192.168.0.6:5000"
-            ]
-        }
-
-    Example Partial Success Response:
-        {
-            "message": "Nodes registration completed: 1 succeeded, 1 failed",
-            "total_nodes": ["192.168.0.5:5000"],
-            "successful_nodes": ["http://192.168.0.5:5000"],
-            "failed_nodes": [
-                {
-                    "node": "http://invalid-url",
-                    "error": "Invalid URL format"
-                }
-            ]
-        }
-    """
     values = request.get_json()
     nodes = values.get("nodes")
 
@@ -456,14 +286,17 @@ def register_nodes():
     response = {
         "message": f"Nodes registration completed: {len(successful_nodes)} succeeded, {len(failed_nodes)} failed",
         "total_nodes": list(blockchain.nodes),
-        "successful_nodes": successful_nodes
+        "successful_nodes": successful_nodes,
     }
 
     if failed_nodes:
         response["failed_nodes"] = failed_nodes
 
-    logger.info(f"Registered {len(successful_nodes)} new nodes, {len(failed_nodes)} failed")
+    logger.info(
+        f"Registered {len(successful_nodes)} new nodes, {len(failed_nodes)} failed"
+    )
     return jsonify(response), 201
+
 
 @app.route("/nodes/resolve", methods=["GET"])
 def consensus():
@@ -474,7 +307,7 @@ def consensus():
     and replaces this node's chain if a longer valid chain is found on another node.
 
     The consensus algorithm follows the rule that the longest valid chain in the network
-    is considered authoritative. This ensures all nodes in the network eventually 
+    is considered authoritative. This ensures all nodes in the network eventually
     converge to the same blockchain state.
 
     Returns:
@@ -506,13 +339,13 @@ def consensus():
         if replaced:
             response = {
                 "message": "Our chain was replaced",
-                "new_chain_length": len(blockchain.chain)
+                "new_chain_length": len(blockchain.chain),
             }
             logger.info("Chain replaced during consensus")
         else:
             response = {
                 "message": "Our chain is authoritative",
-                "chain_length": len(blockchain.chain)
+                "chain_length": len(blockchain.chain),
             }
             logger.info("Chain maintained during consensus")
 
@@ -520,6 +353,7 @@ def consensus():
     except Exception as e:
         logger.error(f"Consensus error: {str(e)}")
         return jsonify({"error": f"Error during consensus resolution: {str(e)}"}), 500
+
 
 @app.route("/nodes/get", methods=["GET"])
 def get_nodes():
@@ -538,67 +372,338 @@ def get_nodes():
             "count": 2
         }
     """
-    response = {
-        "nodes": list(blockchain.nodes),
-        "count": len(blockchain.nodes)
-    }
+    response = {"nodes": list(blockchain.nodes), "count": len(blockchain.nodes)}
     return jsonify(response), 200
+
 
 @app.route("/block/<int:block_id>", methods=["GET"])
 def get_block(block_id):
-    """
-    Retrieve a specific block from the blockchain by its index.
-
-    Args:
-        block_id (int): The index of the block to retrieve
-
-    Returns:
-        tuple: JSON response with block data and hash, and 200 status code
-               or error message with 404 status code if block not found
-
-    Example Request:
-        GET /block/5
-
-    Example Response:
-        {
-            "block": {
-                "index": 5,
-                "timestamp": 1623825026.744143,
-                "transactions": [
-                    {
-                        "sender": "sender_address_hash",
-                        "recipient": "recipient_address_hash",
-                        "amount": 5.0,
-                        "signature": "digital_signature_data",
-                        "timestamp": 1623825026.744143
-                    }
-                ],
-                "nonce": 12345,
-                "previous_hash": "hash_of_block_4"
-            },
-            "hash": "hash_of_block_5"
-        }
-    """
     if block_id < 0 or block_id >= len(blockchain.chain):
         return jsonify({"error": f"Block #{block_id} not found"}), 404
 
-    return jsonify({
-        "block": blockchain.chain[block_id],
-        "hash": blockchain.hash(blockchain.chain[block_id])
-    }), 200
+    return (
+        jsonify(
+            {
+                "block": blockchain.chain[block_id],
+                "hash": blockchain.hash(blockchain.chain[block_id]),
+            }
+        ),
+        200,
+    )
+
+
+# Healthcare-specific endpoints
+@app.route("/medical/record", methods=["POST"])
+@validate_json_request(
+    required_fields=["patient_id", "record_type", "medical_data", "signature"]
+)
+@authorize_healthcare_access
+def add_medical_record():
+    values = request.get_json()
+
+    # Extract values
+    patient_id = values.get("patient_id")
+    record_type = values.get("record_type")
+    medical_data = values.get("medical_data")
+    signature = values.get("signature")
+    access_list = values.get("access_list", [patient_id, request.user_id])
+
+    # Validate record type
+    if record_type not in RECORD_TYPES.values():
+        return (
+            jsonify(
+                {
+                    "error": f"Invalid record type. Must be one of: {', '.join(RECORD_TYPES.values())}"
+                }
+            ),
+            400,
+        )
+
+    # Check authorization (only doctors/providers can add records)
+    if request.user_role != "healthcare_provider":
+        return (
+            jsonify({"error": "Only healthcare providers can add medical records"}),
+            403,
+        )
+
+    try:
+        # Add the medical record to the blockchain
+        block_index = blockchain.new_medical_record(
+            patient_id,
+            request.user_id,  # doctor_id from the authenticated user
+            record_type,
+            medical_data,
+            access_list,
+            signature,
+        )
+
+        if block_index:
+            response = {
+                "message": f"Medical record will be added to Block {block_index}",
+                "record_type": record_type,
+                "patient_id": patient_id,
+                "provider_id": request.user_id,
+                "timestamp": values.get("timestamp", time.time()),
+            }
+            logger.info(f"New medical record: {record_type} for patient {patient_id}")
+            return jsonify(response), 201
+        else:
+            return (
+                jsonify(
+                    {"error": "Invalid medical record - signature verification failed"}
+                ),
+                406,
+            )
+
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        logger.error(f"Error adding medical record: {str(e)}")
+        return jsonify({"error": f"Error processing medical record: {str(e)}"}), 500
+
+
+@app.route("/medical/records/<patient_id>", methods=["GET"])
+@authorize_healthcare_access
+def get_medical_records(patient_id):
+    record_type = request.args.get("record_type")
+
+    # Check authorization:
+    # 1. Patient can access their own records
+    # 2. Healthcare providers need to be in the access list
+    is_self_access = request.user_id == patient_id
+    is_provider = request.user_role == "healthcare_provider"
+
+    if not (is_self_access or is_provider):
+        return jsonify({"error": "Unauthorized access to patient records"}), 403
+
+    # Retrieve the patient's records
+    try:
+        records = blockchain.get_patient_records(
+            patient_id, request.user_id, record_type
+        )
+
+        return (
+            jsonify(
+                {"patient_id": patient_id, "records": records, "count": len(records)}
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrieving medical records: {str(e)}")
+        return jsonify({"error": f"Error retrieving medical records: {str(e)}"}), 500
+
+
+@app.route("/medical/consent", methods=["POST"])
+@validate_json_request(
+    required_fields=["patient_id", "provider_id", "access_type", "signature"]
+)
+@authorize_healthcare_access
+def manage_consent():
+    """
+    Manage patient consent for data access.
+
+    This endpoint allows patients to grant or revoke access to their medical records.
+
+    Required JSON payload:
+        - patient_id (str): Identifier for the patient
+        - provider_id (str): ID of the provider to grant/revoke access
+        - access_type (str): "grant" or "revoke"
+        - signature (str): Patient's digital signature
+        - record_types (list, optional): List of record types to grant/revoke access to
+
+    Returns:
+        tuple: JSON response with consent details and status code
+    """
+    values = request.get_json()
+
+    # Extract values
+    patient_id = values.get("patient_id")
+    provider_id = values.get("provider_id")
+    access_type = values.get("access_type")
+    signature = values.get("signature")
+    record_types = values.get("record_types", list(RECORD_TYPES.values()))
+
+    # Verify that requester is the patient
+    if request.user_id != patient_id:
+        return (
+            jsonify(
+                {"error": "Only patients can manage consent for their own records"}
+            ),
+            403,
+        )
+
+    # Validate access type
+    if access_type not in ["grant", "revoke"]:
+        return jsonify({"error": "access_type must be either 'grant' or 'revoke'"}), 400
+
+    try:
+        # Create a consent record on the blockchain
+        consent_data = {
+            "action": access_type,
+            "provider_id": provider_id,
+            "record_types": record_types,
+            "timestamp": time.time(),
+            "expiration": values.get("expiration"),  # Optional expiration time
+        }
+
+        block_index = blockchain.new_medical_record(
+            patient_id,
+            patient_id,  # patient is the author of this consent
+            RECORD_TYPES["CONSENT"],
+            consent_data,
+            [
+                patient_id,
+                provider_id,
+            ],  # Both patient and provider can access this consentimport jwt
+            signature,
+        )
+
+        if block_index:
+            response = {
+                "message": f"Consent record will be added to Block {block_index}",
+                "patient_id": patient_id,
+                "provider_id": provider_id,
+                "access_type": access_type,
+                "record_types": record_types,
+            }
+            logger.info(
+                f"New consent record: {access_type} access for provider {provider_id}"
+            )
+            return jsonify(response), 201
+        else:
+            return (
+                jsonify(
+                    {"error": "Invalid consent record - signature verification failed"}
+                ),
+                406,
+            )
+
+    except Exception as e:
+        logger.error(f"Error managing consent: {str(e)}")
+        return jsonify({"error": f"Error processing consent: {str(e)}"}), 500
+
+
+# Add new endpoint for registering Web3Auth users
+@app.route("/auth/register", methods=["POST"])
+@validate_json_request(required_fields=["idToken", "role"])
+def register_user():
+    """
+    Register or update a user from Web3Auth.
+
+    This endpoint allows updating user information and role.
+
+    Required JSON payload:
+        - idToken: Web3Auth ID token
+        - role: User role (patient or healthcare_provider)
+
+    Returns:
+        tuple: JSON response with user details and status code
+    """
+    values = request.get_json()
+    id_token = values.get("idToken")
+    requested_role = values.get("role")
+
+    try:
+        from blockchain.auth_service import verify_web3auth_token, USER_STORE
+
+        # Verify the token
+        user_info = verify_web3auth_token(id_token)
+        user_id = user_info.get("sub")
+
+        if not user_id:
+            return jsonify({"error": "Invalid token - missing user ID"}), 400
+
+        # Validate requested role
+        if requested_role not in ["patient", "healthcare_provider"]:
+            return (
+                jsonify(
+                    {
+                        "error": "Invalid role - must be 'patient' or 'healthcare_provider'"
+                    }
+                ),
+                400,
+            )
+
+        # Generate a blockchain ID from the user's Web3Auth public key
+        blockchain_id = user_info.get("wallets", {}).get("public_key", user_id)
+
+        # Update or create user
+        USER_STORE[user_id] = {
+            "role": requested_role,
+            "blockchain_id": blockchain_id,
+            "name": user_info.get("name", "Anonymous"),
+            "email": user_info.get("email", ""),
+            "created_at": time.time(),
+        }
+
+        return (
+            jsonify(
+                {
+                    "message": "User registered successfully",
+                    "user_id": user_id,
+                    "blockchain_id": blockchain_id,
+                    "role": requested_role,
+                }
+            ),
+            201,
+        )
+
+    except AuthError as e:
+        return jsonify({"error": str(e)}), 401
+    except Exception as e:
+        logger.error(f"User registration error: {str(e)}")
+        return jsonify({"error": f"Error during user registration: {str(e)}"}), 500
+
+
+# Add endpoint to validate authentication
+@app.route("/auth/validate", methods=["GET"])
+def validate_auth():
+    """
+    Validate authentication token and return user information.
+
+    This endpoint checks if the provided token is valid and returns user details.
+
+    Returns:
+        tuple: JSON response with user details and status code
+    """
+    auth_header = request.headers.get("Authorization")
+
+    try:
+        user_id, role, user_info = validate_auth_header(auth_header)
+
+        return (
+            jsonify(
+                {
+                    "valid": True,  # Test endpoint for development - remove in production
+                    "user_id": user_id,
+                    "role": role,
+                    "user_info": {
+                        "name": user_info.get("name"),
+                        "email": user_info.get("email"),
+                    },
+                }
+            ),
+            200,
+        )
+
+    except AuthError as e:
+        return jsonify({"valid": False, "error": str(e)}), 401
 
 if __name__ == "__main__":
     from argparse import ArgumentParser
 
     parser = ArgumentParser()
-    parser.add_argument('-p', '--port', default=5000, type=int, help='port to listen on')
-    parser.add_argument('-h', '--host', default='0.0.0.0', help='host to listen on')
-    parser.add_argument('--debug', action='store_true', help='enable debug mode')
+    parser.add_argument(
+        "-p", "--port", default=5000, type=int, help="port to listen on"
+    )
+    parser.add_argument("-h", "--host", default="0.0.0.0", help="host to listen on")
+    parser.add_argument("--debug", action="store_true", help="enable debug mode")
     args = parser.parse_args()
 
     port = args.port
     host = args.host
     debug = args.debug
 
-    logger.info(f"Starting blockchain node on {host}:{port}")
+    logger.info("Starting blockchain node on %s :%s", host, port)
     app.run(host=host, port=port, debug=debug)
