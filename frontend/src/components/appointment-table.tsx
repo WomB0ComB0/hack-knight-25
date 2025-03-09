@@ -1,10 +1,9 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState } from "react"
-import { Check, Plus, Trash2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import type React from "react";
+import { useState } from "react";
+import { Check, Plus, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -13,19 +12,30 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import type { Appointment } from "@/types/appointment"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import type { Appointment } from "@/types/appointment";
 
 interface AppointmentTableProps {
-  appointments: Appointment[]
-  onAddAppointment: (appointment: Appointment) => void
-  onDeleteAppointment: (id: string) => void
+  appointments: Appointment[];
+  onAddAppointment: (appointment: Appointment) => void;
+  onDeleteAppointment: (id: string) => void;
 }
 
-export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppointment }: AppointmentTableProps) {
+export function AppointmentTable({
+  appointments,
+  onAddAppointment,
+  onDeleteAppointment,
+}: AppointmentTableProps) {
   const [newAppointment, setNewAppointment] = useState<Partial<Appointment>>({
     name: "",
     email: "",
@@ -35,16 +45,16 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
     condition: "",
     smartContractKey: "",
     avatar: "/placeholder.svg?height=32&width=32",
-  })
-  const [open, setOpen] = useState(false)
+  });
+  const [open, setOpen] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setNewAppointment({ ...newAppointment, [name]: value })
-  }
+    const { name, value } = e.target;
+    setNewAppointment({ ...newAppointment, [name]: value });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
     const appointment: Appointment = {
       id: Date.now().toString(),
@@ -54,11 +64,13 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
       visitTime: newAppointment.visitTime || "",
       doctor: newAppointment.doctor || "",
       condition: newAppointment.condition || "",
-      smartContractKey: newAppointment.smartContractKey || `0x${Math.random().toString(16).slice(2, 10)}`,
+      smartContractKey:
+        newAppointment.smartContractKey ||
+        `0x${Math.random().toString(16).slice(2, 10)}`,
       avatar: "/placeholder.svg?height=32&width=32",
-    }
+    };
 
-    onAddAppointment(appointment)
+    onAddAppointment(appointment);
     setNewAppointment({
       name: "",
       email: "",
@@ -68,9 +80,9 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
       condition: "",
       smartContractKey: "",
       avatar: "/placeholder.svg?height=32&width=32",
-    })
-    setOpen(false)
-  }
+    });
+    setOpen(false);
+  };
 
   return (
     <div className="rounded-lg border bg-white shadow">
@@ -86,7 +98,9 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Appointment</DialogTitle>
-              <DialogDescription>Enter the details for your new appointment.</DialogDescription>
+              <DialogDescription>
+                Enter the details for your new appointment.
+              </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleSubmit}>
               <div className="grid gap-4 py-4">
@@ -227,7 +241,8 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
                 <TableCell>{appointment.doctor}</TableCell>
                 <TableCell>{appointment.condition}</TableCell>
                 <TableCell className="font-mono text-xs">
-                  {appointment.smartContractKey || `0x${Math.random().toString(16).slice(2, 10)}`}
+                  {appointment.smartContractKey ||
+                    `0x${Math.random().toString(16).slice(2, 10)}`}
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
@@ -250,5 +265,5 @@ export function AppointmentTable({ appointments, onAddAppointment, onDeleteAppoi
         </Table>
       </div>
     </div>
-  )
+  );
 }

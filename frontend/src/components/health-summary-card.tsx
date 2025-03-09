@@ -1,5 +1,11 @@
-import { Activity, Heart, TreesIcon as Lungs, Weight } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Activity, Heart, TreesIcon as Lungs, Weight } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function HealthSummaryCard() {
   return (
@@ -52,5 +58,5 @@ export function HealthSummaryCard() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
