@@ -10,28 +10,28 @@ from cryptography.fernet import Fernet
 import base64
 import logging
 import requests
+from typing import Any, Dict, List, Optional, Set, Union
+# Use pycryptodome package instead of Crypto for better compatibility
 from Crypto.Hash import SHA
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 
+# Configure logging once at module level
 logger = logging.getLogger("blockchain")
 logger.setLevel(logging.INFO)
-# Create console handler and set level
-handler = logging.StreamHandler()
-handler.setLevel(logging.INFO)
-# Create formatter
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-# Add formatter to handler
-handler.setFormatter(formatter)
-# Add handler to logger
-logger.addHandler(handler)
+
+# Only add handler if not already added (prevents duplicate log entries)
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 # Global constants for blockchain operation
 MINING_SENDER = "THE BLOCKCHAIN"  # Special identifier for mining rewards
 MINING_REWARD = 1  # Amount of cryptocurrency awarded for mining a block
-MINING_DIFFICULTY = (
-    2  # Difficulty of the proof of work (number of leading zeros required)
-)
+MINING_DIFFICULTY = 2  # Difficulty of the proof of work (number of leading zeros required)
 
 # Healthcare-specific constants
 RECORD_TYPES = {
@@ -49,42 +49,73 @@ RECORD_TYPES = {
 
 
 class Blockchain:
-    def __init__(self):
-        self.chain = []  # The blockchain - a list of blocks
-        self.transactions = []  # Pending transactions for the next block
-        self.nodes = set()  # Set of nodes in the network for consensus
-        self.node_id = str(uuid4()).replace("-", "")  # Unique identifier for this node
+    def __init__(self) -> None:
+        """Initialize a new blockchain."""
+        self.chain: List[Dict[str, Any]] = []  # The blockchain - a list of blocks
+        self.transactions: List[Dict[str, Any]] = []  # Pending transactions for the next block
+        self.nodes: Set[str] = set()  # Set of nodes in the network for consensus
+        self.node_id: str = str(uuid4()).replace("-", "")  # Unique identifier for this node
+
         # Create the genesis block (first block in the chain)
         self.new_block(0, "00")
 
         # Generate or load encryption key
         self.encryption_key = self._get_or_create_encryption_key()
 
-    def _get_or_create_encryption_key(self):
-        """Generate or load a key for encrypting sensitive medical data"""
+    def _get_or_create_encryption_key(self) -> bytes:
+        """Generate or load a key for encrypting sensitive medical data."""
         key_file = "medical_encryption.key"
-        if os.path.exists(key_file):
-            with open(key_file, "rb") as f:
-                return f.read()
-        else:
-            # Generate a new key
-            key = Fernet.generate_key()
-            with open(key_file, "wb") as f:
-                f.write(key)
-            return key
+        try:
+            if os.path.exists(key_file):
+                with open(key_file, "rb") as f:
+                    return f.read()
+            else:
+                # Generate a new key
+                key = Fernet.generate_key()
+                # Ensure directory exists
+                os.makedirs(os.path.dirname(key_file) or '.', exist_ok=True)
+                # Use secure file permissions for the key
+                with open(key_file, "wb") as f:
+                    f.write(key)
+                os.chmod(key_file, 0o600)  # Read/write for owner only
+                return key
+        except (IOError, OSError) as e:
+            logger.error(f"Error accessing encryption key file: {e}")
+            # Generate a temporary key in memory
+            logger.warning("Using temporary in-memory encryption key")
+            return Fernet.generate_key()
 
-    def encrypt_medical_data(self, data):
-        """Encrypt sensitive medical data"""
+    def encrypt_medical_data(self, data: Any) -> Optional[str]:
+        """Encrypt sensitive medical data.
+
+        Args:
+            data: The data to encrypt
+
+        Returns:
+            Base64-encoded encrypted data or None if input is empty
+        """
         if not data:
             return None
 
-        f = Fernet(self.encryption_key)
-        json_data = json.dumps(data)
-        encrypted_data = f.encrypt(json_data.encode())
-        return base64.b64encode(encrypted_data).decode()
+        try:
+            f = Fernet(self.encryption_key)
+            json_data = json.dumps(data)
+            encrypted_data = f.encrypt(json_data.encode())
+            return base64.b64encode(encrypted_data).decode()
+        except Exception as e:
+            logger.error(f"Encryption error: {e}")
+            return None
 
-    def decrypt_medical_data(self, encrypted_data, authorized=False):
-        """Decrypt medical data if authorized"""
+    def decrypt_medical_data(self, encrypted_data: Optional[str], authorized: bool = False) -> Optional[Any]:
+        """Decrypt medical data if authorized.
+
+        Args:
+            encrypted_data: The encrypted data to decrypt
+            authorized: Whether the requester is authorized to access this data
+
+        Returns:
+            Decrypted data or None if unauthorized or decryption failed
+        """
         if not encrypted_data or not authorized:
             return None
 
@@ -97,14 +128,25 @@ class Blockchain:
             logger.error(f"Decryption error: {e}")
             return None
 
-    def new_block(self, nonce: int, previous_hash: str = None) -> dict:
+    def new_block(self, nonce: int, previous_hash: Optional[str] = None) -> Dict[str, Any]:
+        """Create a new block in the blockchain.
+
+        Args:
+            nonce: The proof of work value
+            previous_hash: Hash of previous block (optional for genesis block)
+
+        Returns:
+            The newly created block
+        """
+        # Handle genesis block case
+        prev_hash = previous_hash if previous_hash is not None else self.hash(self.chain[-1])
+
         block = {
             "index": len(self.chain) + 1,  # Block number in sequence
             "timestamp": time(),  # Current timestamp
             "transactions": self.transactions.copy(),  # Copy of list of transactions
             "nonce": nonce,  # Proof of work value
-            "previous_hash": previous_hash
-            or self.hash(self.chain[-1]),  # Link to previous block
+            "previous_hash": prev_hash,  # Link to previous block
         }
 
         # Reset the current list of transactions
@@ -114,6 +156,16 @@ class Blockchain:
         return block
 
     def new_transaction(self, sender: str, recipient: str, amount: int) -> int:
+        """Add a new transaction to the list of pending transactions.
+
+        Args:
+            sender: Sender's address
+            recipient: Recipient's address
+            amount: Transaction amount
+
+        Returns:
+            The index of the block that will hold this transaction
+        """
         self.transactions.append(
             {"sender": sender, "recipient": recipient, "amount": amount}
         )
@@ -121,33 +173,72 @@ class Blockchain:
         return self.last_block["index"] + 1
 
     @staticmethod
-    def hash(block: dict) -> str:
+    def hash(block: Dict[str, Any]) -> str:
+        """Create a SHA-256 hash of a block.
 
+        Args:
+            block: Block to hash
+
+        Returns:
+            Hash string
+        """
         # We must make sure that the Dictionary is Ordered, or we'll have inconsistent hashes
         block_string = json.dumps(block, sort_keys=True).encode()
         return hashlib.sha256(block_string).hexdigest()
 
     @property
-    def last_block(self):
+    def last_block(self) -> Dict[str, Any]:
+        """Get the last block in the chain.
+
+        Returns:
+            The most recent block
+        """
         return self.chain[-1]
 
     def proof_of_work(self) -> int:
+        """Proof of Work algorithm.
+
+        Find a number (nonce) that produces a hash with leading zeros.
+
+        Returns:
+            The nonce that satisfies the proof of work
+        """
         last_block = self.chain[-1]
         last_hash = self.hash(last_block)
 
         nonce = 0
-        while self.valid_proof(self.transactions, last_hash, nonce) is False:
+        while not self.valid_proof(self.transactions, last_hash, nonce):
             nonce += 1
 
         return nonce
 
     @staticmethod
-    def valid_proof(transactions, last_hash, nonce, difficulty=MINING_DIFFICULTY):
+    def valid_proof(transactions: List[Dict[str, Any]], last_hash: str, nonce: int, 
+                    difficulty: int = MINING_DIFFICULTY) -> bool:
+        """Validate the proof of work.
+
+        Args:
+            transactions: List of transactions
+            last_hash: Hash of the previous block
+            nonce: The proof of work value
+            difficulty: The number of leading zeros required
+
+        Returns:
+            True if valid, False otherwise
+        """
         guess = (str(transactions) + str(last_hash) + str(nonce)).encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:difficulty] == "0" * difficulty
 
     def register_node(self, address: str) -> None:
+        """Add a new node to the list of nodes.
+
+        Args:
+            address: Address of the node. e.g. 'http://192.168.0.5:5000'
+
+        Raises:
+            ValueError: If the URL is invalid
+        """
         try:
             parsed_url = urlparse(address)
             if parsed_url.netloc:
@@ -160,7 +251,18 @@ class Blockchain:
         except ValueError as e:
             raise ValueError(f"Invalid URL: {str(e)}") from e
 
-    def verify_transaction_signature(self, sender_address, signature, transaction):
+    def verify_transaction_signature(self, sender_address: str, signature: str, 
+                                    transaction: Dict[str, Any]) -> bool:
+        """Verify the signature of a transaction.
+
+        Args:
+            sender_address: Sender's address (hex encoded public key)
+            signature: Signature to verify
+            transaction: Transaction data
+
+        Returns:
+            True if the signature is valid, False otherwise
+        """
         try:
             # Import the public key
             public_key = RSA.importKey(binascii.unhexlify(sender_address))
@@ -170,16 +272,28 @@ class Blockchain:
             h = SHA.new(str(transaction).encode("utf8"))
 
             # Verify the signature using the public key
-            try:
-                verifier.verify(h, binascii.unhexlify(signature))
-                return True
-            except (ValueError, TypeError):
-                return False
+            verifier.verify(h, binascii.unhexlify(signature))
+            return True
         except (ValueError, TypeError, binascii.Error) as e:
             logger.error(f"Signature verification error: {e}")
             return False
+        except Exception as e:
+            logger.error(f"Unexpected error during signature verification: {e}")
+            return False
 
-    def submit_transaction(self, sender_address, recipient_address, value, signature):
+    def submit_transaction(self, sender_address: str, recipient_address: str, 
+                          value: int, signature: str) -> Union[int, bool]:
+        """Add a transaction to pending transactions.
+
+        Args:
+            sender_address: Sender's address
+            recipient_address: Recipient's address
+            value: Transaction amount
+            signature: Transaction signature
+
+        Returns:
+            Block index or False if signature verification fails
+        """
         transaction = OrderedDict(
             {
                 "sender_address": sender_address,
@@ -202,15 +316,14 @@ class Blockchain:
 
     def new_medical_record(
         self,
-        patient_id,
-        doctor_id,
-        record_type,
-        medical_data,
-        access_list=None,
-        signature=None,
-    ):
-        """
-        Creates a new medical record transaction to go into the next mined Block.
+        patient_id: str,
+        doctor_id: str,
+        record_type: str,
+        medical_data: Any,
+        access_list: Optional[List[str]] = None,
+        signature: Optional[str] = None,
+    ) -> Union[int, bool]:
+        """Creates a new medical record transaction to go into the next mined Block.
 
         Args:
             patient_id: Patient identifier (hash of patient's public key)
@@ -221,7 +334,7 @@ class Blockchain:
             signature: Doctor's signature to validate the record
 
         Returns:
-            The index of the Block that will hold this record
+            The index of the Block that will hold this record or False if validation fails
         """
         if record_type not in RECORD_TYPES.values():
             raise ValueError(
@@ -230,6 +343,9 @@ class Blockchain:
 
         # Encrypt the medical data
         encrypted_data = self.encrypt_medical_data(medical_data)
+        if encrypted_data is None and medical_data is not None:
+            logger.error("Failed to encrypt medical data")
+            return False
 
         # Create the medical record transaction
         record = OrderedDict(
@@ -247,26 +363,33 @@ class Blockchain:
         # Verify doctor's signature
         if doctor_id != MINING_SENDER:  # Skip verification for system-generated records
             if not self.verify_record_signature(doctor_id, signature, record):
+                logger.warning(f"Record signature verification failed for doctor_id: {doctor_id}")
                 return False
 
         self.transactions.append(record)
         return self.last_block["index"] + 1
 
-    def verify_record_signature(self, provider_id, signature, record):
-        """
-        Verify that a medical record was signed by the healthcare provider
+    def verify_record_signature(self, provider_id: str, signature: Optional[str], 
+                              record: Dict[str, Any]) -> bool:
+        """Verify that a medical record was signed by the healthcare provider.
+
+        Args:
+            provider_id: Provider's ID
+            signature: Signature to verify
+            record: Record data
+
+        Returns:
+            True if the signature is valid, False otherwise
         """
         # Special case for debug mode signature
         if signature == "DEBUG_SKIP_VERIFICATION":
+            logger.warning("Skipping signature verification in DEBUG mode")
             return True
 
         # For doctors/providers adding records, we need signature verification
         if not signature:
+            logger.error("Missing signature for record verification")
             return False
-
-        # Special case for debug mode
-        if signature == "DEBUG_SKIP_VERIFICATION":
-            return True
 
         try:
             # Create a copy of the record without the data field for signature verification
@@ -284,19 +407,18 @@ class Blockchain:
                 json.dumps(record_for_verification, sort_keys=True).encode("utf8")
             )
 
-            try:
-                verifier.verify(record_hash, binascii.unhexlify(signature))
-                return True
-            except (ValueError, TypeError):
-                return False
-
+            verifier.verify(record_hash, binascii.unhexlify(signature))
+            return True
+        except (ValueError, TypeError, binascii.Error) as e:
+            logger.error(f"Record signature verification error: {e}")
+            return False
         except Exception as e:
-            logger.error(f"Error verifying record signature: {str(e)}")
+            logger.error(f"Unexpected error verifying record signature: {str(e)}")
             return False
 
-    def get_patient_records(self, patient_id, requester_id, record_type=None):
-        """
-        Retrieve all medical records for a specific patient
+    def get_patient_records(self, patient_id: str, requester_id: str, 
+                           record_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Retrieve all medical records for a specific patient.
 
         Args:
             patient_id: ID of the patient
@@ -316,7 +438,6 @@ class Blockchain:
                     transaction.get("type") == "MEDICAL_RECORD"
                     and transaction.get("patient_id") == patient_id
                 ):
-
                     # Check if record type matches filter (if provided)
                     if record_type and transaction.get("record_type") != record_type:
                         continue
@@ -328,7 +449,7 @@ class Blockchain:
                         record = transaction.copy()
 
                         # Decrypt the data if the requester is authorized
-                        if "data" in record:
+                        if "data" in record and record["data"]:
                             decrypted_data = self.decrypt_medical_data(
                                 record["data"], authorized=True
                             )
@@ -341,9 +462,8 @@ class Blockchain:
 
         return records
 
-    def valid_chain(self, chain: list) -> bool:
-        """
-        Validate the entire blockchain.
+    def valid_chain(self, chain: List[Dict[str, Any]]) -> bool:
+        """Validate the entire blockchain.
 
         Verifies that each block in the chain has a valid hash link to the previous
         block and that each block's proof of work is valid.
@@ -365,20 +485,16 @@ class Blockchain:
 
             # Check that the hash of the previous block is correct
             if block.get("previous_hash") != self.hash(last_block):
+                logger.warning(f"Invalid hash link at block {current_index}")
                 return False
 
-            # Check that the Proof of Work is correct
-            # Prepare transactions for validation, taking into account both standard transactions
-            # and medical records
-            tx_list = block.get("transactions", [])
-
-            # Create a representation of transactions for proof validation
-            # This is simplified for validation purposes
+            # Create a simplified representation of transactions for proof validation
             transactions_for_validation = []
+            tx_list = block.get("transactions", [])
 
             for tx in tx_list:
                 # Handle regular transactions
-                if "sender" in tx and "recipient" in tx and "amount" in tx:
+                if all(k in tx for k in ("sender", "recipient", "amount")):
                     transactions_for_validation.append(
                         {
                             "sender": tx["sender"],
@@ -388,7 +504,6 @@ class Blockchain:
                     )
                 # Handle medical records
                 elif tx.get("type") == "MEDICAL_RECORD":
-                    # For medical records, we include a simplified representation
                     transactions_for_validation.append(
                         {
                             "type": "MEDICAL_RECORD",
@@ -401,10 +516,11 @@ class Blockchain:
             # Verify the nonce is valid for this block
             if not self.valid_proof(
                 transactions_for_validation,
-                block.get("previous_hash"),
-                block.get("nonce"),
+                block.get("previous_hash", ""),
+                block.get("nonce", 0),
                 MINING_DIFFICULTY,
             ):
+                logger.warning(f"Invalid proof of work at block {current_index}")
                 return False
 
             last_block = block
@@ -413,8 +529,7 @@ class Blockchain:
         return True
 
     def resolve_conflicts(self) -> bool:
-        """
-        Resolve conflicts between blockchain nodes by implementing consensus.
+        """Resolve conflicts between blockchain nodes by implementing consensus.
 
         This is the consensus algorithm that resolves conflicts by replacing
         our chain with the longest valid chain in the network.
@@ -426,12 +541,11 @@ class Blockchain:
         if not self.nodes:
             return False
 
-        neighbours = self.nodes
         new_chain = None
         max_length = len(self.chain)
 
         # Grab and verify the chains from all the nodes in our network
-        for node in neighbours:
+        for node in self.nodes:
             try:
                 response = requests.get(f"http://{node}/chain", timeout=3)
 
@@ -451,6 +565,7 @@ class Blockchain:
         # Replace our chain if we discovered a new, valid chain longer than ours
         if new_chain:
             self.chain = new_chain
+            logger.info(f"Chain replaced with longer chain of length {max_length}")
             return True
 
         return False

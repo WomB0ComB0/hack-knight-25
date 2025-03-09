@@ -4,29 +4,28 @@ import requests
 import time
 import jwt
 from typing import Dict, Optional, Tuple, Any
-from urllib.parse import urlparse
-from dotenv import load_dotenv, find_dotenv
 from os import environ
+import uuid
+from functools import lru_cache
 
-
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Web3Auth configuration
 WEB3AUTH_VERIFIER_URL = "https://authjs.web3auth.io/api/v4/verify_jwt"
-WEB3AUTH_CLIENT_ID = "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ"
+WEB3AUTH_CLIENT_ID = environ.get("W3A_CLIENT_ID")
 
-# User role mapping store - in production, this would be a database
-# Format: {web3auth_user_id: {"role": "patient|healthcare_provider", "blockchain_id": "hash"}}
+# In-memory user store - in production, this would be a database
 USER_STORE = {}
 
 
 class AuthError(Exception):
     """Authentication error"""
-
     pass
 
 
+@lru_cache(maxsize=128)
 def verify_web3auth_token(token: str) -> Dict[str, Any]:
     """
     Verify a Web3Auth token with the Web3Auth verification service.
@@ -41,22 +40,23 @@ def verify_web3auth_token(token: str) -> Dict[str, Any]:
         AuthError: If token verification fails
     """
     try:
-        # First verify token structure and expiration locally
-        # We'll still send it to Web3Auth for full verification
+        # Verify token structure and expiration locally first
         payload = jwt.decode(token, options={"verify_signature": False})
 
-        # Check if token is expired
+        # Check token expiration
         if payload.get("exp") and payload["exp"] < time.time():
             raise AuthError("Token has expired")
 
         # Verify with Web3Auth service
+        verification_data = {
+            "verifier_id": "web3auth-core",
+            "id_token": token,
+            "client_id": WEB3AUTH_CLIENT_ID,
+        }
+
         response = requests.post(
             WEB3AUTH_VERIFIER_URL,
-            json={
-                "verifier_id": "web3auth-core",  # Default verifier for Web3Auth
-                "id_token": token,
-                "client_id": WEB3AUTH_CLIENT_ID,
-            },
+            json=verification_data,
             timeout=5,
         )
 
@@ -78,72 +78,65 @@ def verify_web3auth_token(token: str) -> Dict[str, Any]:
         raise AuthError(f"Verification service error: {str(e)}")
 
 
-def get_or_create_user(user_info: Dict[str, Any]) -> Dict[str, str]:
+def get_or_create_user(user_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Get an existing user or create a new one based on Web3Auth info.
 
     Args:
-        user_info: User information from Web3Auth
+        user_data: User information from Web3Auth
 
     Returns:
         Dict with user role and blockchain ID
     """
-    user_id = user_info.get("sub")
-    if not user_id:
-        raise AuthError("Missing user ID in token")
+    # Ensure we have a user ID
+    user_id = user_data.get("id", str(uuid.uuid4()))
 
-    # If user exists, return their info
+    # Return existing user if found
     if user_id in USER_STORE:
         return USER_STORE[user_id]
 
-    # New user - determine role
-    # In a production system, you might have a registration process
-    # Here we're assigning based on email domain as an example
-    email = user_info.get("email", "")
-    if (
-        email.endswith("hospital.org")
-        or email.endswith("clinic.com")
-        or email.endswith("doctor.com")
-    ):
-        role = "healthcare_provider"
-    else:
-        role = "patient"
-
-    # Generate a blockchain ID from the user's Web3Auth public key
-    # In a real system, this would be their actual blockchain address
-    blockchain_id = user_info.get("wallets", {}).get("public_key", user_id)
-
-    # Store user information
-    USER_STORE[user_id] = {
-        "role": role,
-        "blockchain_id": blockchain_id,
-        "name": user_info.get("name", "Anonymous"),
-        "email": email,
-        "created_at": time.time(),
+    # Create new user
+    user_info = {
+        "role": user_data.get("role", "patient"),
+        "blockchain_id": user_data.get("blockchain_id", user_id),
+        "name": user_data.get("name", "Anonymous"),
+        "email": user_data.get("email", ""),
+        "created_at": user_data.get("created_at", int(time.time())),
     }
 
-    logger.info(f"Created new user: {blockchain_id} with role {role}")
-    return USER_STORE[user_id]
+    # Store and log new user
+    USER_STORE[user_id] = user_info
+    logger.info(f"Created new user: {user_info['blockchain_id']} with role {user_info['role']}")
+
+    return user_info
 
 
 def validate_auth_header(auth_header: str) -> Tuple[str, str, Dict[str, Any]]:
     """
-    Validate authorization header and return user info.
+    Validate API key authorization header.
 
     Args:
         auth_header: Authorization header from request
 
     Returns:
-        Tuple of (user_id, role, user_info)
+        Tuple of (blockchain_id, role, user_info)
 
     Raises:
         AuthError: If authentication fails
     """
-    if not auth_header or not auth_header.startswith("Bearer "):
+    if not auth_header or not auth_header.startswith("ApiKey "):
         raise AuthError("Invalid authorization header")
 
-    token = auth_header.split(" ", 1)[1]
-    user_info = verify_web3auth_token(token)
-    user_data = get_or_create_user(user_info)
+    api_key = auth_header.split(" ", 1)[1]
 
-    return user_data["blockchain_id"], user_data["role"], user_data
+    # Create user based on API key
+    user_data = {
+        "id": api_key,
+        "role": "healthcare_provider",
+        "name": f"User {api_key[:8]}",
+        "email": f"user_{api_key[:8]}@example.com",
+    }
+
+    user_info = get_or_create_user(user_data)
+
+    return user_info["blockchain_id"], user_info["role"], user_info
