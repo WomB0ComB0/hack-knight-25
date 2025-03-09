@@ -1,2 +1,0 @@
-PORT=8080
-DATABASE_URI=postgresql://postgres:postgres@postgres:5432/postgres

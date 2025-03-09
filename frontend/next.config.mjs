@@ -8,7 +8,6 @@ const config = {
       fullUrl: true,
     },
   },
-  experimental: { instrumentationHook: true },
 }
 
 export default config

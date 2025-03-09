@@ -21,6 +21,8 @@
     "coupling-graph": "bunx madge --extensions js,jsx,ts,tsx,css,md,mdx ./ --exclude '.next|tailwind.config.js|reset.d.ts|prettier.config.js|postcss.config.js|playwright.config.ts|next.config.js|next-env.d.ts|instrumentation.ts|e2e/|README.md|.storybook/|.eslintrc.js' --image graph.svg"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.12.4",
+    "@clerk/themes": "^2.2.20",
     "@hookform/resolvers": "^3.9.1",
     "@next/bundle-analyzer": "^14.2.3",
     "@radix-ui/react-accordion": "^1.2.2",
@@ -63,6 +65,7 @@
     "clsx": "^2.1.1",
     "cmdk": "1.0.4",
     "date-fns": "4.1.0",
+    "dotenv": "^16.4.7",
     "embla-carousel-react": "8.5.1",
     "input-otp": "1.4.1",
     "lodash": "^4.17.21",
