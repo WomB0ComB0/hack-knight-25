@@ -2,3 +2,7 @@ flask
 requests
 flask-cors
 pycryptodome
+cryptography
+jwt
+python-dotenv
+PyJWT
