@@ -96,7 +96,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
+        const data = await response.json() as {
+          valid: boolean;
+          user_id: string;
+          role: UserRole;
+          user_info: {
+            name: string;
+            email: string;
+          };
+        };
         setUserInfo({
           id: w3aUserInfo.idToken || '',
           email: w3aUserInfo.email || '',
