@@ -8,13 +8,14 @@ from urllib.parse import urlparse
 from dotenv import load_dotenv, find_dotenv
 from os import environ
 
+load_dotenv(find_dotenv())
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Web3Auth configuration
 WEB3AUTH_VERIFIER_URL = "https://authjs.web3auth.io/api/v4/verify_jwt"
-WEB3AUTH_CLIENT_ID = "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ"
+WEB3AUTH_CLIENT_ID = environ.get("W3A_CLIENT_ID")
 
 # User role mapping store - in production, this would be a database
 # Format: {web3auth_user_id: {"role": "patient|healthcare_provider", "blockchain_id": "hash"}}
@@ -28,18 +29,6 @@ class AuthError(Exception):
 
 
 def verify_web3auth_token(token: str) -> Dict[str, Any]:
-    """
-    Verify a Web3Auth token with the Web3Auth verification service.
-
-    Args:
-        token (str): The JWT token from Web3Auth
-
-    Returns:
-        Dict: The token payload with user information
-
-    Raises:
-        AuthError: If token verification fails
-    """
     try:
         # First verify token structure and expiration locally
         # We'll still send it to Web3Auth for full verification
@@ -79,15 +68,6 @@ def verify_web3auth_token(token: str) -> Dict[str, Any]:
 
 
 def get_or_create_user(user_info: Dict[str, Any]) -> Dict[str, str]:
-    """
-    Get an existing user or create a new one based on Web3Auth info.
-
-    Args:
-        user_info: User information from Web3Auth
-
-    Returns:
-        Dict with user role and blockchain ID
-    """
     user_id = user_info.get("sub")
     if not user_id:
         raise AuthError("Missing user ID in token")
@@ -127,18 +107,6 @@ def get_or_create_user(user_info: Dict[str, Any]) -> Dict[str, str]:
 
 
 def validate_auth_header(auth_header: str) -> Tuple[str, str, Dict[str, Any]]:
-    """
-    Validate authorization header and return user info.
-
-    Args:
-        auth_header: Authorization header from request
-
-    Returns:
-        Tuple of (user_id, role, user_info)
-
-    Raises:
-        AuthError: If authentication fails
-    """
     if not auth_header or not auth_header.startswith("Bearer "):
         raise AuthError("Invalid authorization header")
 

@@ -99,12 +99,6 @@ def authorize_healthcare_access(f):
 # Error handlers
 @app.errorhandler(404)
 def not_found(error):
-    """
-    Handle 404 Not Found errors.
-
-    Returns:
-        tuple: A JSON response with error message and 404 status code
-    """
     return jsonify({"error": "Resource not found"}), 404
 
 
@@ -300,36 +294,6 @@ def register_nodes():
 
 @app.route("/nodes/resolve", methods=["GET"])
 def consensus():
-    """
-    Resolve conflicts between nodes using the consensus algorithm.
-
-    This endpoint contacts all registered nodes, compares their chains with this node's chain,
-    and replaces this node's chain if a longer valid chain is found on another node.
-
-    The consensus algorithm follows the rule that the longest valid chain in the network
-    is considered authoritative. This ensures all nodes in the network eventually
-    converge to the same blockchain state.
-
-    Returns:
-        tuple: JSON response with consensus results and 200 status code
-               or error message with 500 status code
-
-    Example Response (Chain Replaced):
-        {
-            "message": "Our chain was replaced",
-            "new_chain_length": 15
-        }
-
-    Example Response (Chain Maintained):
-        {
-            "message": "Our chain is authoritative",
-            "chain_length": 20
-        }
-
-    Note:
-        This endpoint requires network communication with other nodes and may take
-        time depending on network conditions and the number of registered nodes.
-    """
     if not blockchain.nodes:
         return jsonify({"message": "No nodes registered. Nothing to resolve."}), 200
 
@@ -357,21 +321,6 @@ def consensus():
 
 @app.route("/nodes/get", methods=["GET"])
 def get_nodes():
-    """
-    Retrieve all nodes currently registered in the blockchain network.
-
-    Returns:
-        tuple: JSON response with registered nodes and 200 status code
-
-    Example Response:
-        {
-            "nodes": [
-                "192.168.0.5:5000",
-                "192.168.0.6:5000"
-            ],
-            "count": 2
-        }
-    """
     response = {"nodes": list(blockchain.nodes), "count": len(blockchain.nodes)}
     return jsonify(response), 200
 
@@ -500,21 +449,6 @@ def get_medical_records(patient_id):
 )
 @authorize_healthcare_access
 def manage_consent():
-    """
-    Manage patient consent for data access.
-
-    This endpoint allows patients to grant or revoke access to their medical records.
-
-    Required JSON payload:
-        - patient_id (str): Identifier for the patient
-        - provider_id (str): ID of the provider to grant/revoke access
-        - access_type (str): "grant" or "revoke"
-        - signature (str): Patient's digital signature
-        - record_types (list, optional): List of record types to grant/revoke access to
-
-    Returns:
-        tuple: JSON response with consent details and status code
-    """
     values = request.get_json()
 
     # Extract values
@@ -588,18 +522,6 @@ def manage_consent():
 @app.route("/auth/register", methods=["POST"])
 @validate_json_request(required_fields=["idToken", "role"])
 def register_user():
-    """
-    Register or update a user from Web3Auth.
-
-    This endpoint allows updating user information and role.
-
-    Required JSON payload:
-        - idToken: Web3Auth ID token
-        - role: User role (patient or healthcare_provider)
-
-    Returns:
-        tuple: JSON response with user details and status code
-    """
     values = request.get_json()
     id_token = values.get("idToken")
     requested_role = values.get("role")
@@ -659,14 +581,6 @@ def register_user():
 # Add endpoint to validate authentication
 @app.route("/auth/validate", methods=["GET"])
 def validate_auth():
-    """
-    Validate authentication token and return user information.
-
-    This endpoint checks if the provided token is valid and returns user details.
-
-    Returns:
-        tuple: JSON response with user details and status code
-    """
     auth_header = request.headers.get("Authorization")
 
     try:
