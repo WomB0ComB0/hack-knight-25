@@ -604,6 +604,7 @@ def validate_auth():
     except AuthError as e:
         return jsonify({"valid": False, "error": str(e)}), 401
 
+
 if __name__ == "__main__":
     from argparse import ArgumentParser
 

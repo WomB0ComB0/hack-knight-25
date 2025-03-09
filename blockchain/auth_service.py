@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # Web3Auth configuration
 WEB3AUTH_VERIFIER_URL = "https://authjs.web3auth.io/api/v4/verify_jwt"
-WEB3AUTH_CLIENT_ID = "BPi5PB_UiIZ-cPz1GtV5i1I2iOSOHuimiXBI0e-Oe_u6X3oVAbCiAZOTEBtTXw4tsluTITPqA8zMsfxIKMjiqNQ"
+WEB3AUTH_CLIENT_ID = environ.get("W3A_CLIENT_ID")
 
 # User role mapping store - in production, this would be a database
 # Format: {web3auth_user_id: {"role": "patient|healthcare_provider", "blockchain_id": "hash"}}
