@@ -11,7 +11,8 @@ logger.info("Starting application")
 
 if not logger.handlers:
     logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     logger.addHandler(logging.StreamHandler())
 

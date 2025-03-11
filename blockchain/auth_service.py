@@ -38,6 +38,7 @@ class UserInfo:
 class AuthError(Exception):
     """Authentication error"""
 
+
 @lru_cache(maxsize=TOKEN_CACHE_SIZE)
 def verify_web3auth_token(token: str) -> Dict[str, Any]:
     """

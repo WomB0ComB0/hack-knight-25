@@ -217,7 +217,7 @@ class Blockchain:
             return False
 
     def submit_transaction(
-        self, sender_address: str, recipient_address: str, value: int, signature: str
+        self, sender_address: str, recipient_address: str, value: float, signature: str
     ) -> Union[int, bool]:
         """Add a transaction after verifying signature."""
         transaction = OrderedDict(
