@@ -1,8 +1,6 @@
-# Install dependencies using Poetry
-echo 'Installing dependencies...'
-poetry install
+#!/bin/env bash
+set -euo pipefail
 
-<<<<<<< Updated upstream
 # --- Utility Functions ---
 
 # Function to display a message
@@ -867,8 +865,3 @@ EOF
     ;;
   esac
 done
-=======
-# Start the application using Waitress (for Flask)
-echo 'Starting the server on port 5000...'
-poetry run waitress-serve --port=5000 app:app
->>>>>>> Stashed changes
