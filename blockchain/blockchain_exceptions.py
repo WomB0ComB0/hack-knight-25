@@ -9,6 +9,7 @@ import traceback
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional, Type, Union
 from cryptography.fernet import Fernet
+from cryptography.fernet import InvalidToken
 
 logger = logging.getLogger("blockchain.exceptions")
 
@@ -149,6 +150,8 @@ def default_fallback_handler(exception: Exception) -> Dict[str, Any]:
 def encrypt_with_exception_handling(blockchain, data: Any) -> Optional[str]:
     """Example of using the exception handler with your encryption method."""
 
+    # Import the proper exception
+
     encryption_handlers = {
         TypeError: lambda e: logger.error("Type error during encryption: %s", str(e))
         or None,
@@ -156,7 +159,7 @@ def encrypt_with_exception_handling(blockchain, data: Any) -> Optional[str]:
             "JSON error during encryption: %s", str(e)
         )
         or None,
-        Fernet.InvalidToken: lambda e: logger.error("Invalid Fernet token: %s", str(e))
+        InvalidToken: lambda e: logger.error("Invalid Fernet token: %s", str(e))
         or None,
     }
 

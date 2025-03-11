@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+# pylint: disable=W0611
+
 import binascii
 import hashlib
 import json
@@ -11,10 +15,22 @@ from urllib.parse import urlparse
 from uuid import uuid4
 
 import base64
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from Crypto.Hash import SHA
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
+
+from .blockchain_exceptions import (
+    BlockchainException, 
+    EncryptionException, 
+    SignatureException,
+    TransactionException,
+    NodeConnectionException,
+    ValidationException,
+    MedicalRecordException,
+    handle_exceptions,
+    default_fallback_handler
+)
 
 # Configure logging
 logger = logging.getLogger("blockchain")
@@ -86,24 +102,23 @@ class Blockchain:
 
     def encrypt_medical_data(self, data: Any) -> Optional[str]:
         """Encrypt sensitive medical data."""
-        if not data:
-            return None
+        encryption_handlers = {
+            TypeError: lambda e: logger.error("Type error during encryption: %s", str(e)) or None,
+            json.JSONDecodeError: lambda e: logger.error("JSON error during encryption: %s", str(e)) or None,
+            InvalidToken: lambda e: logger.error("Invalid Fernet token: %s", str(e)) or None,
+        }
 
-        try:
+        @handle_exceptions(encryption_handlers, fallback_handler=default_fallback_handler)
+        def _encrypt():
+            if not data:
+                return None
+
             f = Fernet(self.encryption_key)
             json_data = json.dumps(data)
             encrypted_data = f.encrypt(json_data.encode())
             return base64.b64encode(encrypted_data).decode()
-        except (
-            TypeError,
-            json.JSONDecodeError,
-            Fernet.
-        ) as e:
-            logger.error("Encryption error: %s", e)
-            return None
-        except Exception as e:
-            logger.error("Encryption error: %s", e)
-            return None
+
+        return _encrypt()
 
     def decrypt_medical_data(
         self, encrypted_data: Optional[str], authorized: bool = False
@@ -112,14 +127,21 @@ class Blockchain:
         if not encrypted_data or not authorized:
             return None
 
-        try:
+        decryption_handlers = {
+            TypeError: lambda e: logger.error("Type error during decryption: %s", str(e)) or None,
+            json.JSONDecodeError: lambda e: logger.error("JSON error during decryption: %s", str(e)) or None,
+            InvalidToken: lambda e: logger.error("Invalid Fernet token: %s", str(e)) or None,
+            base64.: lambda e: logger.error("Base64 decoding error: %s", str(e)) or None,
+        }
+
+        @handle_exceptions(decryption_handlers, fallback_handler=default_fallback_handler)
+        def _decrypt():
             f = Fernet(self.encryption_key)
             decoded = base64.b64decode(encrypted_data)
             decrypted_data = f.decrypt(decoded).decode()
             return json.loads(decrypted_data)
-        except Exception as e:
-            logger.error("Decryption error: %s", e)
-            return None
+
+        return _decrypt()
 
     def new_block(
         self, nonce: int, previous_hash: Optional[str] = None
@@ -200,21 +222,21 @@ class Blockchain:
         self, sender_address: str, signature: str, transaction: Dict[str, Any]
     ) -> bool:
         """Verify the signature of a transaction."""
-        try:
+        signature_handlers = {
+            ValueError: lambda e: logger.error("Value error during signature verification: %s", str(e)) or False,
+            TypeError: lambda e: logger.error("Type error during signature verification: %s", str(e)) or False,
+            binascii.Error: lambda e: logger.error("Binascii error during signature verification: %s", str(e)) or False,
+        }
+
+        @handle_exceptions(signature_handlers, fallback_handler=lambda e: False)
+        def _verify():
             public_key = RSA.importKey(binascii.unhexlify(sender_address))
             verifier = pkcs1_15.new(public_key)
-
             h = SHA.new(str(transaction).encode("utf8"))
-
             verifier.verify(h, binascii.unhexlify(signature))
             return True
 
-        except (ValueError, TypeError, binascii.Error) as e:
-            logger.error("Signature verification error: %s", e)
-            return False
-        except Exception as e:
-            logger.error("Unexpected error during signature verification: %s", e)
-            return False
+        return _verify()
 
     def submit_transaction(
         self, sender_address: str, recipient_address: str, value: float, signature: str
@@ -248,38 +270,47 @@ class Blockchain:
         signature: Optional[str] = None,
     ) -> Union[int, bool]:
         """Create a new medical record transaction."""
-        if record_type not in RECORD_TYPES.values():
-            raise ValueError(
-                f"Invalid record type. Must be one of: {', '.join(RECORD_TYPES.values())}"
+        record_handlers = {
+            ValueError: lambda e: logger.error("Invalid record type: %s", str(e)) or False,
+            EncryptionException: lambda e: logger.error("Encryption error: %s", str(e)) or False,
+        }
+
+        @handle_exceptions(record_handlers, fallback_handler=lambda e: False)
+        def _create_record():
+            if record_type not in RECORD_TYPES.values():
+                raise ValueError(
+                    f"Invalid record type. Must be one of: {', '.join(RECORD_TYPES.values())}"
+                )
+
+            encrypted_data = self.encrypt_medical_data(medical_data)
+            if encrypted_data is None and medical_data is not None:
+                logger.error("Failed to encrypt medical data")
+                return False
+
+            record = OrderedDict(
+                {
+                    "type": "MEDICAL_RECORD",
+                    "patient_id": patient_id,
+                    "doctor_id": doctor_id,
+                    "record_type": record_type,
+                    "data": encrypted_data,
+                    "timestamp": time(),
+                    "access_list": access_list or [patient_id, doctor_id],
+                }
             )
 
-        encrypted_data = self.encrypt_medical_data(medical_data)
-        if encrypted_data is None and medical_data is not None:
-            logger.error("Failed to encrypt medical data")
-            return False
+            if doctor_id != MINING_SENDER and not self.verify_record_signature(
+                doctor_id, signature, record
+            ):
+                logger.warning(
+                    "Record signature verification failed for doctor_id: %s", doctor_id
+                )
+                return False
 
-        record = OrderedDict(
-            {
-                "type": "MEDICAL_RECORD",
-                "patient_id": patient_id,
-                "doctor_id": doctor_id,
-                "record_type": record_type,
-                "data": encrypted_data,
-                "timestamp": time(),
-                "access_list": access_list or [patient_id, doctor_id],
-            }
-        )
+            self.transactions.append(record)
+            return self.last_block["index"] + 1
 
-        if doctor_id != MINING_SENDER and not self.verify_record_signature(
-            doctor_id, signature, record
-        ):
-            logger.warning(
-                "Record signature verification failed for doctor_id: %s", doctor_id
-            )
-            return False
-
-        self.transactions.append(record)
-        return self.last_block["index"] + 1
+        return _create_record()
 
     def verify_record_signature(
         self, provider_id: str, signature: Optional[str], record: Dict[str, Any]
@@ -293,7 +324,14 @@ class Blockchain:
             logger.error("Missing signature for record verification")
             return False
 
-        try:
+        signature_handlers = {
+            ValueError: lambda e: logger.error("Value error during record signature verification: %s", str(e)) or False,
+            TypeError: lambda e: logger.error("Type error during record signature verification: %s", str(e)) or False,
+            binascii.Error: lambda e: logger.error("Binascii error during record signature verification: %s", str(e)) or False,
+        }
+
+        @handle_exceptions(signature_handlers, fallback_handler=lambda e: False)
+        def _verify():
             record_for_verification = record.copy()
             if "data" in record_for_verification:
                 record_for_verification["data"] = "SIGNATURE_PLACEHOLDER"
@@ -308,9 +346,7 @@ class Blockchain:
             verifier.verify(record_hash, binascii.unhexlify(signature))
             return True
 
-        except (ValueError, TypeError, binascii.Error) as e:
-            logger.error("Record signature verification error: %s", e)
-            return False
+        return _verify()
 
     def get_patient_records(
         self, patient_id: str, requester_id: str, record_type: Optional[str] = None
@@ -346,52 +382,60 @@ class Blockchain:
 
     def valid_chain(self, chain: List[Dict[str, Any]]) -> bool:
         """Validate the entire blockchain."""
-        if not chain:
-            return False
+        validation_handlers = {
+            Exception: lambda e: logger.error("Chain validation error: %s", str(e)) or False,
+        }
 
-        last_block = chain[0]
-        current_index = 1
-
-        while current_index < len(chain):
-            block = chain[current_index]
-
-            if block.get("previous_hash") != self.hash(last_block):
-                logger.warning("Invalid hash link at block %s", current_index)
+        @handle_exceptions(validation_handlers, fallback_handler=lambda e: False)
+        def _validate():
+            if not chain:
                 return False
 
-            transactions_for_validation = []
-            for tx in block.get("transactions", []):
-                if all(k in tx for k in ("sender", "recipient", "amount")):
-                    transactions_for_validation.append(
-                        {
-                            "sender": tx["sender"],
-                            "recipient": tx["recipient"],
-                            "amount": tx["amount"],
-                        }
-                    )
-                elif tx.get("type") == "MEDICAL_RECORD":
-                    transactions_for_validation.append(
-                        {
-                            "type": "MEDICAL_RECORD",
-                            "patient_id": tx.get("patient_id"),
-                            "doctor_id": tx.get("doctor_id"),
-                            "record_type": tx.get("record_type"),
-                        }
-                    )
+            last_block = chain[0]
+            current_index = 1
 
-            if not self.valid_proof(
-                transactions_for_validation,
-                block.get("previous_hash", ""),
-                block.get("nonce", 0),
-                MINING_DIFFICULTY,
-            ):
-                logger.warning("Invalid proof of work at block %s", current_index)
-                return False
+            while current_index < len(chain):
+                block = chain[current_index]
 
-            last_block = block
-            current_index += 1
+                if block.get("previous_hash") != self.hash(last_block):
+                    logger.warning("Invalid hash link at block %s", current_index)
+                    return False
 
-        return True
+                transactions_for_validation = []
+                for tx in block.get("transactions", []):
+                    if all(k in tx for k in ("sender", "recipient", "amount")):
+                        transactions_for_validation.append(
+                            {
+                                "sender": tx["sender"],
+                                "recipient": tx["recipient"],
+                                "amount": tx["amount"],
+                            }
+                        )
+                    elif tx.get("type") == "MEDICAL_RECORD":
+                        transactions_for_validation.append(
+                            {
+                                "type": "MEDICAL_RECORD",
+                                "patient_id": tx.get("patient_id"),
+                                "doctor_id": tx.get("doctor_id"),
+                                "record_type": tx.get("record_type"),
+                            }
+                        )
+
+                if not self.valid_proof(
+                    transactions_for_validation,
+                    block.get("previous_hash", ""),
+                    block.get("nonce", 0),
+                    MINING_DIFFICULTY,
+                ):
+                    logger.warning("Invalid proof of work at block %s", current_index)
+                    return False
+
+                last_block = block
+                current_index += 1
+
+            return True
+
+        return _validate()
 
     def resolve_conflicts(self) -> bool:
         """Implement consensus by adopting the longest valid chain."""
@@ -401,9 +445,15 @@ class Blockchain:
         new_chain = None
         max_length = len(self.chain)
 
-        # Check chains from all nodes
         for node in self.nodes:
-            try:
+            node_handlers = {
+                requests.RequestException: lambda e: logger.error("Request error connecting to node %s: %s", node, str(e)) or None,
+                ValueError: lambda e: logger.error("Value error with node %s: %s", node, str(e)) or None,
+                KeyError: lambda e: logger.error("Key error with node data from %s: %s", node, str(e)) or None,
+            }
+
+            @handle_exceptions(node_handlers, fallback_handler=lambda e: None)
+            def _check_node():
                 response = requests.get(f"http://{node}/chain", timeout=3)
 
                 if response.status_code == 200:
@@ -411,16 +461,14 @@ class Blockchain:
                     length = data.get("length", 0)
                     chain = data.get("chain", [])
 
-                    # Replace our chain if a longer valid chain is found
                     if length > max_length and self.valid_chain(chain):
-                        max_length = length
-                        new_chain = chain
+                        return (length, chain)
+                return None
 
-            except (requests.RequestException, ValueError, KeyError) as e:
-                logger.error("Error connecting to node %s: %s", node, e)
-                continue
+            result = _check_node()
+            if result:
+                max_length, new_chain = result
 
-        # Replace our chain if we found a longer valid chain
         if new_chain:
             self.chain = new_chain
             logger.info("Chain replaced with longer chain of length %s", max_length)

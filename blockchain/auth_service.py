@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# pylint: disable=W0611,W0718
+
 import json
 import logging
 import requests
