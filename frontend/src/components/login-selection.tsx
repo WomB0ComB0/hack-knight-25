@@ -40,6 +40,7 @@ export function LoginSelection() {
   const [registerName, setRegisterName] = useState("")
   const [registerEmail, setRegisterEmail] = useState("")
   const [registerRole, setRegisterRole] = useState<'patient' | 'healthcare_provider'>('patient')
+  const [error, setError] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -75,6 +76,7 @@ export function LoginSelection() {
     e.preventDefault()
     try {
       setIsLoading(true)
+      setError(null);
 
       // Register new user
       const response = await auth.register(registerName, registerEmail, registerRole) as RegisterResponse
@@ -96,6 +98,7 @@ export function LoginSelection() {
       // Redirect to dashboard
       router.push("/dashboard")
     } catch (error) {
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
       console.error("Registration failed:", error)
       toast({
         title: "Registration failed",
@@ -229,6 +232,11 @@ export function LoginSelection() {
                     </select>
                   </div>
                 </div>
+                {error && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4">
+                    <p>{error}</p>
+                  </div>
+                )}
                 <DialogFooter>
                   <Button type="submit" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

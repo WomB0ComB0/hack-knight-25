@@ -68,23 +68,38 @@ export const fetchWithAuth = async <T>(url: string, options: RequestInit = {}): 
   }
 };
 
+/**
+ * Handles fetch errors with more detailed information
+ */
+const handleFetchError = (error: unknown, endpoint: string): never => {
+  console.error(`API request failed for ${endpoint}:`, error);
+  if (error instanceof TypeError && error.message === 'Failed to fetch') {
+    throw new Error(`Network error: Unable to connect to the server at ${API_BASE_URL}. Please check if the server is running and accessible.`);
+  }
+  throw error instanceof Error ? error : new Error(String(error));
+};
+
 export const auth = {
   register: async <T>(name: string, email: string, role: 'patient' | 'healthcare_provider'): Promise<T> => {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, role }),
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, role }),
+      });
 
-    if (!response.ok) {
       const data = await response.json();
-      throw new Error((data as ApiError).error || `API error: ${response.status}`);
-    }
+      
+      if (!response.ok) {
+        throw new Error((data as ApiError).error || `API error: ${response.status}`);
+      }
 
-    const data = await response.json();
-    return data as T;
+      return data as T;
+    } catch (error) {
+      return handleFetchError(error, '/auth/register');
+    }
   },
 
   validate: async <T>(apiKey: string): Promise<T> => {
