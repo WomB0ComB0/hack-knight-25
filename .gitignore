@@ -27,3 +27,5 @@ logs/
 # MacOS generated file
 .DS_STORE
 
+# node-modules
+/node_modules

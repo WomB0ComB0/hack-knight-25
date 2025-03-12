@@ -2,8 +2,14 @@
   "name": "hack-knight-25",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "start:frontend": "cd frontend && bun run dev",
+    "start:blockchain": "cd blockchain && FLASK_DEBUG=1 FLASK_APP=app.py flask run",
+    "dev": "concurrently \"bun run start:blockchain\" \"bun run start:frontend\""
+  },
   "devDependencies": {
-    "@types/bun": "latest"
+    "@types/bun": "latest",
+    "concurrently": "^9.1.2"
   },
   "peerDependencies": {
     "typescript": "^5.0.0"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Bell, Search, User } from "lucide-react"
+import { Bell, Search, User, LogOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -12,8 +12,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useRouter } from "next/navigation"
+import { auth } from "@/utils/api"
 
-export function Header() {
+interface HeaderProps {
+  userInfo?: any;
+}
+
+export function Header({ userInfo }: HeaderProps) {
+  const router = useRouter();
   const [notifications, setNotifications] = useState([
     { id: 1, message: "Dr. Jacob Jones approved your data access request", time: "5 min ago" },
     { id: 2, message: "New lab results available", time: "1 hour ago" },
@@ -22,6 +29,11 @@ export function Header() {
 
   const clearNotifications = () => {
     setNotifications([])
+  }
+
+  const handleLogout = () => {
+    auth.clearUserData();
+    router.push("/");
   }
 
   return (
@@ -78,13 +90,23 @@ export function Header() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>
+                {userInfo?.name || 'My Account'}
+                {userInfo?.role && (
+                  <span className="block text-xs text-gray-500">
+                    {userInfo.role === 'patient' ? 'Patient' : 'Healthcare Provider'}
+                  </span>
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem>Profile</DropdownMenuItem>
               <DropdownMenuItem>Settings</DropdownMenuItem>
               <DropdownMenuItem>Data Access Log</DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem>Log out</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

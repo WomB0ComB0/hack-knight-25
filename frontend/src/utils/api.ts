@@ -1,11 +1,74 @@
-// Add these functions to your api.ts file
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
-// Storage key for user info
+export interface ApiError {
+  error?: string;
+}
+
+export interface MedicalRecordData {
+  patient_id: string;
+  record_type: string;
+  medical_data: Record<string, unknown>;
+  signature: string;
+  access_list?: string[];
+}
+
+export interface ConsentData {
+  patient_id: string;
+  provider_id: string;
+  access_type: 'grant' | 'revoke';
+  signature: string;
+  record_types?: string[];
+}
+
+export type ApiResponse<T = unknown> = T | ApiError;
+
+/**
+ * Storage key for API key
+ */
+const API_KEY_STORAGE = 'apiKey';
+
 export const USER_INFO_STORAGE = 'userInfo';
 
-// Authentication functions
+
+/**
+ * Wrapper for fetch that includes authorization headers
+ * @param url - API endpoint URL
+ * @param options - Fetch request options
+ * @returns Promise with typed response data
+ */
+export const fetchWithAuth = async <T>(url: string, options: RequestInit = {}): Promise<T> => {
+  const apiKey = localStorage.getItem(API_KEY_STORAGE);
+
+  if (!apiKey) {
+    throw new Error('Not authenticated');
+  }
+
+  const headers = new Headers(options.headers);
+  headers.set('Authorization', `ApiKey ${apiKey}`);
+  headers.set('Content-Type', 'application/json');
+
+  try {
+    const response = await fetch(`${API_BASE_URL}${url}`, {
+      ...options,
+      headers,
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error((data as ApiError).error || `API error: ${response.status}`);
+    }
+
+    return data as T;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error('Unknown API error occurred');
+  }
+};
+
 export const auth = {
-  // Register a new user
   register: async <T>(name: string, email: string, role: 'patient' | 'healthcare_provider'): Promise<T> => {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
@@ -24,7 +87,6 @@ export const auth = {
     return data as T;
   },
 
-  // Validate API key
   validate: async <T>(apiKey: string): Promise<T> => {
     const response = await fetch(`${API_BASE_URL}/auth/validate`, {
       headers: {
@@ -41,28 +103,23 @@ export const auth = {
     return data as T;
   },
 
-  // Store user auth data
   storeUserData: (apiKey: string, userData: any): void => {
     localStorage.setItem(API_KEY_STORAGE, apiKey);
     localStorage.setItem(USER_INFO_STORAGE, JSON.stringify(userData));
   },
 
-  // Clear user auth data
   clearUserData: (): void => {
     localStorage.removeItem(API_KEY_STORAGE);
     localStorage.removeItem(USER_INFO_STORAGE);
   },
 
-  // Get stored user data
   getUserData: (): any | null => {
     const userData = localStorage.getItem(USER_INFO_STORAGE);
     return userData ? JSON.parse(userData) : null;
   },
 };
 
-// Add transaction functions to the api object
 export const api = {
-  // Records
   getMedicalRecords: async <T>(patientId: string, recordType?: string): Promise<T> => {
     const queryParams = recordType ? `?record_type=${encodeURIComponent(recordType)}` : '';
     return fetchWithAuth<T>(`/medical/records/${encodeURIComponent(patientId)}${queryParams}`);
@@ -75,7 +132,6 @@ export const api = {
     });
   },
 
-  // Consent Management
   manageConsent: async <T>(data: ConsentData): Promise<T> => {
     return fetchWithAuth<T>('/medical/consent', {
       method: 'POST',
@@ -83,7 +139,6 @@ export const api = {
     });
   },
 
-  // Blockchain Info
   getBlockchainInfo: async <T>(): Promise<T> => {
     return fetchWithAuth<T>('/chain');
   },
@@ -96,7 +151,6 @@ export const api = {
     return fetchWithAuth<T>('/mine');
   },
   
-  // Generic Blockchain Transactions
   createTransaction: async <T>(sender: string, recipient: string, amount: number, signature: string): Promise<T> => {
     return fetchWithAuth<T>('/transactions/new', {
       method: 'POST',
@@ -109,7 +163,6 @@ export const api = {
     });
   },
   
-  // Nodes management
   registerNodes: async <T>(nodes: string[]): Promise<T> => {
     return fetchWithAuth<T>('/nodes/register', {
       method: 'POST',
@@ -125,7 +178,6 @@ export const api = {
     return fetchWithAuth<T>('/nodes/resolve');
   },
   
-  // Block retrieval
   getBlock: async <T>(blockId: number): Promise<T> => {
     return fetchWithAuth<T>(`/block/${blockId}`);
   },

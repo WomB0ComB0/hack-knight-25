@@ -6,10 +6,10 @@ import { NavigationSidebar } from "@/components/navigation-sidebar";
 import { AppointmentTable } from "@/components/appointment-table";
 import { DataAccessCard } from "@/components/data-access-card";
 import { HealthSummaryCard } from "@/components/health-summary-card";
-import { BlockchainInfoCard } from "@/components/blockchain-info-card"; // Import the new component
+import { BlockchainInfoCard } from "@/components/blockchain-info-card"; 
 import type { Appointment } from "@/types/appointment";
 import { useRouter } from "next/navigation";
-import { auth } from "@/utils/api"; // Import auth from API
+import { auth } from "@/utils/api";
 
 export function PatientDashboard() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -31,7 +31,8 @@ export function PatientDashboard() {
       try {
         const response = await fetch("/api/appointments");
         const data = await response.json();
-        setAppointments(data);
+        // Add type assertion to confirm data is of type Appointment[]
+        setAppointments(data as Appointment[]);
       } catch (error) {
         console.error("Error fetching appointments:", error);
         // Use sample data if API fails
@@ -68,7 +69,7 @@ export function PatientDashboard() {
         body: JSON.stringify(appointment),
       });
       const newAppointment = await response.json();
-      setAppointments([...appointments, newAppointment]);
+      setAppointments([...appointments, newAppointment as Appointment]);
     } catch (error) {
       console.error("Error adding appointment:", error);
       // Add locally if API fails

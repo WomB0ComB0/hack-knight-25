@@ -1,4 +1,5 @@
-import { useEffect, useState, createContext, useContext, type ReactNode } from 'react';
+import type { ReactNode, JSX } from 'react';
+import { useEffect, useState, createContext, useContext } from 'react';
 
 // Define types
 type UserRole = 'patient' | 'healthcare_provider';

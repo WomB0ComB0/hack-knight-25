@@ -1,13 +1,15 @@
 /**
  * @type {import('next').NextConfig}
  */
-const config = {
+const nextConfig = {
   reactStrictMode: true,
   logging: {
     fetches: {
       fullUrl: true,
     },
   },
-}
+  poweredByHeader: false,
+  swcMinify: true,
+};
 
-export default config
+export default nextConfig;
