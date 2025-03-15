@@ -87,7 +87,7 @@ export const auth = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, role }),
+        body: JSON.stringify({ name, role, email }),
       });
 
       const data = await response.json();

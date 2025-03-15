@@ -86,8 +86,8 @@ export function LoginSelection() {
         id: response.user_id,
         blockchain_id: response.blockchain_id,
         name: registerName,
+        role: registerRole,
         email: registerEmail,
-        role: registerRole
       })
 
       toast({
@@ -111,10 +111,10 @@ export function LoginSelection() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
       <Card className="w-[350px] shadow-lg">
         <CardContent className="flex flex-col items-center gap-4 p-6">
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+          <div className="flex items-center justify-center w-16 h-16 mb-4 bg-blue-100 rounded-full">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
@@ -123,20 +123,20 @@ export function LoginSelection() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="h-8 w-8 text-blue-600"
+              className="w-8 h-8 text-blue-600"
             >
               <path d="M12 2L2 7l10 5 10-5-10-5z" />
               <path d="M2 17l10 5 10-5" />
               <path d="M2 12l10 5 10-5" />
             </svg>
           </div>
-          <h1 className="text-center text-2xl font-bold">MedChain</h1>
-          <p className="mb-4 text-center text-sm text-gray-500">Secure blockchain healthcare data management</p>
+          <h1 className="text-2xl font-bold text-center">MedChain</h1>
+          <p className="mb-4 text-sm text-center text-gray-500">Secure blockchain healthcare data management</p>
 
           <Dialog open={loginDialogOpen} onOpenChange={setLoginDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                <LogIn className="mr-2 h-4 w-4" />
+                <LogIn className="w-4 h-4 mr-2" />
                 Login
               </Button>
             </DialogTrigger>
@@ -174,7 +174,7 @@ export function LoginSelection() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Login
                   </Button>
                 </DialogFooter>
@@ -185,7 +185,7 @@ export function LoginSelection() {
           <Dialog open={registerDialogOpen} onOpenChange={setRegisterDialogOpen}>
             <DialogTrigger asChild>
               <Button className="w-full bg-green-600 hover:bg-green-700">
-                <UserPlus className="mr-2 h-4 w-4" />
+                <UserPlus className="w-4 h-4 mr-2" />
                 Register
               </Button>
             </DialogTrigger>
@@ -225,7 +225,7 @@ export function LoginSelection() {
                       value={registerRole}
                       onChange={(e) => setRegisterRole(e.target.value as 'patient' | 'healthcare_provider')}
                       required
-                      className="border border-gray-300 rounded-md p-2"
+                      className="p-2 border border-gray-300 rounded-md"
                     >
                       <option value="patient">Patient</option>
                       <option value="healthcare_provider">Healthcare Provider</option>
@@ -233,13 +233,13 @@ export function LoginSelection() {
                   </div>
                 </div>
                 {error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mt-4">
+                  <div className="px-4 py-3 mt-4 text-red-700 bg-red-100 border border-red-400 rounded">
                     <p>{error}</p>
                   </div>
                 )}
                 <DialogFooter>
                   <Button type="submit" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {isLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Register
                   </Button>
                 </DialogFooter>
@@ -247,7 +247,7 @@ export function LoginSelection() {
             </DialogContent>
           </Dialog>
 
-          <div className="mt-4 text-center text-sm">
+          <div className="mt-4 text-sm text-center">
             <span className="text-gray-500">Don&apos;t have an account?</span>{" "}
             <button onClick={() => setRegisterDialogOpen(true)} className="text-blue-600 hover:underline">
               Register

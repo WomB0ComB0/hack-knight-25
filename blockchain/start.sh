@@ -1,6 +1,8 @@
 #!/bin/bash
 
-LOGFILE="/home/wombocombo/github/hack-knight-25/blockchain/start.log"
+touch start.log
+chmod +x start.log
+LOGFILE="start.log"
 
 # Create or clear the log file
 : > $LOGFILE

@@ -23,6 +23,7 @@ Environment Variables:
 
 Dependencies:
 - Flask
+- flask-cors
 - blockchain.blockchain module (local)
 - blockchain.auth_service module (local)
 
@@ -36,6 +37,7 @@ Options:
 
 import time
 from flask import Flask, Response, jsonify, request
+from flask_cors import CORS
 from uuid import uuid4
 from functools import wraps
 import logging
@@ -53,6 +55,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+CORS(app)
 blockchain = Blockchain()
 node_identifier = str(uuid4()).replace("-", "")
 
@@ -964,7 +967,7 @@ def manage_consent() -> Response:
 
 
 @app.route("/auth/register", methods=["POST"])
-@validate_json_request(required_fields=["name", "role"])
+@validate_json_request(required_fields=["name", "role", "email"])
 def register_user() -> Response:
     """
     Register a new user in the system.

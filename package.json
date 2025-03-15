@@ -3,8 +3,8 @@
   "module": "index.ts",
   "type": "module",
   "scripts": {
-    "start:frontend": "cd frontend && bun run dev",
-    "start:blockchain": "cd blockchain && FLASK_DEBUG=1 FLASK_APP=app.py flask run",
+    "start:frontend": "cd frontend && bun install && bun run dev",
+    "start:blockchain": "cd blockchain && pip install -r requirements.txt && FLASK_DEBUG=1 FLASK_APP=app.py flask run",
     "dev": "concurrently \"bun run start:blockchain\" \"bun run start:frontend\""
   },
   "devDependencies": {
