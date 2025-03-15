@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import type { Appointment } from '@/types/appointment';
+import { NextResponse } from 'next/server';
 
 declare const appointments: Appointment[];
 
 export async function DELETE(
-  request: Request,
+  _request: NextRequest,
   { params }: { params: { id: string } }
 ) {
   const id = params.id;
