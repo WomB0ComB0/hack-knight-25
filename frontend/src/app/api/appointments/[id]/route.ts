@@ -5,10 +5,10 @@ import { NextResponse } from 'next/server';
 declare const appointments: Appointment[];
 
 export async function DELETE(
-  _request: NextRequest,
-  { params }: { params: { id: string } }
+  request: NextRequest,
+  context: { params: { id: string } }
 ) {
-  const id = params.id;
+  const id = context.params.id;
   const index = appointments.findIndex(apt => apt.id === id);
   
   if (index === -1) {
