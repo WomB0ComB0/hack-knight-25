@@ -20,7 +20,7 @@ from Crypto.Hash import SHA
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pkcs1_15
 
-from .blockchain_exceptions import (
+from blockchain_exceptions import (
     EncryptionException,
     handle_exceptions,
     default_fallback_handler,
