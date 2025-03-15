@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import type { Appointment } from '@/types/appointment';
 
-declare const appointments: any[];
+declare const appointments: Appointment[];
 
 export async function DELETE(
   request: Request,
