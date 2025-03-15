@@ -44,8 +44,8 @@ import logging
 from typing import Any, Dict, List, Optional, Callable
 import os
 
-from blockchain.blockchain import Blockchain, MINING_SENDER, MINING_REWARD, RECORD_TYPES
-from blockchain.auth_service import validate_auth_header, AuthError
+from blockchain import Blockchain, MINING_SENDER, MINING_REWARD, RECORD_TYPES
+from auth_service import validate_auth_header, AuthError
 
 logging.basicConfig(
     level=logging.INFO,
