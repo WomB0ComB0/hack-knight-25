@@ -5,4 +5,3 @@ pycryptodome
 cryptography
 jwt
 python-dotenv
-PyJWT
