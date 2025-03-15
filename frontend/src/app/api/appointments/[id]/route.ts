@@ -6,9 +6,9 @@ declare const appointments: Appointment[];
 
 export async function DELETE(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: { id: string } }
 ) {
-  const id = context.params.id;
+  const id = params.id;
   const index = appointments.findIndex(apt => apt.id === id);
   
   if (index === -1) {
