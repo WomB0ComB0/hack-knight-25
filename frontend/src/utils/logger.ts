@@ -12,7 +12,6 @@ const isServer = typeof window === "undefined";
 /**
  * Enum representing different logging levels with their priority values.
  * Higher values indicate more verbose logging.
- * @enum {number}
  */
 export enum LogLevel {
   /** No logging */
@@ -33,46 +32,62 @@ export enum LogLevel {
 
 /**
  * Available color keys for log formatting
- * @typedef {'reset' | 'red' | 'yellow' | 'blue' | 'green' | 'gray' | 'bold' | 'magenta' | 'cyan' | 'white'} ColorKey
  */
 export type ColorKey = 'reset' | 'red' | 'yellow' | 'blue' | 'green' | 'gray' | 'bold' | 'magenta' | 'cyan' | 'white';
 
 /**
+ * Valid log level names
+ */
+export type LogLevelName = 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'action' | 'success';
+
+/**
  * Interface for structured data that can be attached to log messages
- * @interface
  */
 export interface LogData {
   /**
-   * Any key-value pairs to include in the log
+   * Optional error object
    */
-  [key: string]: any;
+  error?: Error | Record<string, unknown>;
+
+  /**
+   * Any other key-value pairs to include in the log
+   */
+  [key: string]: unknown;
+}
+
+/**
+ * Interface for formatted message output
+ */
+interface FormattedMessage {
+  prefix: string;
+  message: string;
+  data?: LogData;
 }
 
 /**
  * Configuration options for the Logger
- * @interface
  */
 export interface LoggerOptions {
   /**
    * The minimum level of messages to log
    */
   minLevel?: LogLevel;
-  
+
   /**
    * Whether to include timestamps in log messages
    */
   includeTimestamp?: boolean;
-  
+
   /**
    * Whether to colorize log output
    */
   colorize?: boolean;
-  
+
   /**
    * Whether to write logs to a file (server-side only)
    */
   logToFile?: boolean;
-  
+
   /**
    * Path to the log file if logToFile is enabled
    */
@@ -86,19 +101,19 @@ export interface LoggerOptions {
 export class Logger {
   /** The context/category name for this logger instance */
   private context: string;
-  
+
   /** Whether this logger is running in a server environment */
   private isServerContext: boolean;
-  
+
   /** The minimum log level that will be output */
   private minLevel: LogLevel;
-  
+
   /** Whether to include ISO timestamps in log messages */
   private includeTimestamp: boolean;
-  
+
   /** Whether to apply ANSI color codes to the output */
   private shouldColorize: boolean;
-  
+
   /** Registry of logger instances to implement the singleton pattern */
   private static instances: Map<string, Logger> = new Map();
 
@@ -117,7 +132,7 @@ export class Logger {
   };
 
   /** Mapping of log levels to their display colors */
-  private levelColors: Record<string, ColorKey> = {
+  private levelColors: Record<LogLevelName, ColorKey> = {
     error: "red",
     warn: "yellow",
     info: "blue",
@@ -129,8 +144,8 @@ export class Logger {
 
   /**
    * Create a new Logger instance or return an existing one for the given context
-   * @param {string} context - The context name for this logger (e.g., component or service name)
-   * @param {LoggerOptions} [options={}] - Optional logger configuration
+   * @param context - The context name for this logger (e.g., component or service name)
+   * @param options - Optional logger configuration
    */
   constructor(context: string, options: LoggerOptions = {}) {
     this.context = context;
@@ -144,33 +159,37 @@ export class Logger {
    * Get a logger instance for the given context.
    * If a logger with this context already exists, returns the existing instance.
    * 
-   * @param {string} context - The context name
-   * @param {LoggerOptions} [options] - Optional logger configuration
-   * @returns {Logger} A logger instance for the specified context
+   * @param context - The context name
+   * @param options - Optional logger configuration
+   * @returns A logger instance for the specified context
    */
   public static getLogger(context: string, options?: LoggerOptions): Logger {
     if (!Logger.instances.has(context)) {
       Logger.instances.set(context, new Logger(context, options));
     }
-    return Logger.instances.get(context)!;
+    const logger = Logger.instances.get(context);
+    if (!logger) {
+      throw new Error(`Failed to get or create logger for context: ${context}`);
+    }
+    return logger;
   }
 
   /**
    * Set global minimum log level for all logger instances
    * 
-   * @param {LogLevel} level - The minimum level to log across all loggers
+   * @param level - The minimum level to log across all loggers
    */
   public static setGlobalLogLevel(level: LogLevel): void {
-    Logger.instances.forEach(logger => {
+    for (const logger of Logger.instances.values()) {
       logger.minLevel = level;
-    });
+    }
   }
 
   /**
    * Determine if the current environment should log messages at the specified level
    * 
-   * @param {LogLevel} level - The log level to check
-   * @returns {boolean} Whether logging should occur for this level
+   * @param level - The log level to check
+   * @returns Whether logging should occur for this level
    * @private
    */
   private shouldLog(level: LogLevel): boolean {
@@ -179,7 +198,7 @@ export class Logger {
 
     // Always log server-side actions
     if (this.isServerContext) return true;
-    
+
     // Only log client-side in development or if explicitly enabled
     return process.env.NODE_ENV === "development" || process.env.ENABLE_CLIENT_LOGS === "true";
   }
@@ -187,13 +206,13 @@ export class Logger {
   /**
    * Format a log message with metadata
    * 
-   * @param {string} level - The log level
-   * @param {string} message - The message to log
-   * @param {LogData} [data] - Optional data to include
-   * @returns {Object} Formatted message with prefix and data
+   * @param levelName - The log level name
+   * @param message - The message to log
+   * @param data - Optional data to include
+   * @returns Formatted message with prefix and data
    * @private
    */
-  private formatMessage(level: string, message: string, data?: LogData) {
+  private formatMessage(levelName: LogLevelName, message: string, data?: LogData): FormattedMessage {
     const timestamp = this.includeTimestamp ? new Date().toISOString() : '';
     const environment = this.isServerContext ? "[SERVER]" : "[CLIENT]";
     const prefix = `${timestamp} ${environment} ${this.context}:`;
@@ -203,9 +222,9 @@ export class Logger {
   /**
    * Apply color to text if colorization is enabled
    * 
-   * @param {ColorKey} color - The color to apply
-   * @param {string} text - The text to colorize
-   * @returns {string} Colorized text (if enabled) or original text
+   * @param color - The color to apply
+   * @param text - The text to colorize
+   * @returns Colorized text (if enabled) or original text
    * @private
    */
   private colorize(color: ColorKey, text: string): string {
@@ -217,35 +236,25 @@ export class Logger {
   /**
    * Format a log level indicator with brackets
    * 
-   * @param {string} level - The log level string
-   * @returns {string} Formatted log level indicator
+   * @param levelName - The log level string
+   * @returns Formatted log level indicator
    * @private
    */
-  private formatLogLevel(level: string): string {
-    return `[${level.toUpperCase()}]`;
+  private formatLogLevel(levelName: string): string {
+    return `[${levelName.toUpperCase()}]`;
   }
 
   /**
    * Format the final log output combining all components
    * 
-   * @param {Object} params - The formatted log data
-   * @param {string} params.prefix - The log prefix with context information
-   * @param {string} params.message - The main log message
-   * @param {LogData} [params.data] - Optional structured data to include
-   * @returns {string} The complete formatted log message
+   * @param formattedMessage - The formatted log data
+   * @returns The complete formatted log message
    * @private
    */
-  private formatOutput({
-    prefix,
-    message,
-    data,
-  }: {
-    prefix: string;
-    message: string;
-    data?: LogData;
-  }): string {
+  private formatOutput(formattedMessage: FormattedMessage): string {
+    const { prefix, message, data } = formattedMessage;
     const logParts = [prefix, message];
-    
+
     if (data) {
       // Handle special cases like Error objects better
       if (data.error instanceof Error) {
@@ -255,7 +264,7 @@ export class Logger {
         if (data.error.stack) {
           logParts.push(`  Stack: ${data.error.stack}`);
         }
-        
+
         // Remove error from data to avoid duplication
         const { error, ...restData } = data;
         if (Object.keys(restData).length > 0) {
@@ -263,35 +272,33 @@ export class Logger {
           logParts.push(JSON.stringify(restData, null, 2));
         }
       } else {
-        logParts.push("\n" + JSON.stringify(data, null, 2));
+        logParts.push(`\n${JSON.stringify(data, null, 2)}`);
       }
     }
-    
+
     return logParts.join(" ");
   }
 
   /**
    * Log an informational message
    * 
-   * @param {string} message - The message to log
-   * @param {LogData} [data] - Optional data to include
+   * @param message - The message to log
+   * @param data - Optional data to include
    */
   info(message: string, data?: LogData): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
     const formattedData = this.formatMessage("info", message, data);
     console.log(
-      this.colorize(this.levelColors.info, this.formatLogLevel("info")) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize(this.levelColors.info, this.formatLogLevel("info"))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Log an error message
    * 
-   * @param {string} message - The error message
-   * @param {Error|unknown} [error] - Optional Error object or unknown error
-   * @param {LogData} [data] - Optional additional data
+   * @param message - The error message
+   * @param error - Optional Error object or unknown error
+   * @param data - Optional additional data
    */
   error(message: string, error?: Error | unknown, data?: LogData): void {
     if (!this.shouldLog(LogLevel.ERROR)) return;
@@ -302,100 +309,88 @@ export class Logger {
 
     const formattedData = this.formatMessage("error", message, {
       ...data,
-      error: errorData,
+      error: errorData as Error | Record<string, unknown>,
     });
 
     console.error(
-      this.colorize("bold", this.colorize(this.levelColors.error, this.formatLogLevel("error"))) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize("bold", this.colorize(this.levelColors.error, this.formatLogLevel("error")))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Log a warning message
    * 
-   * @param {string} message - The warning message
-   * @param {LogData} [data] - Optional data to include
+   * @param message - The warning message
+   * @param data - Optional data to include
    */
   warn(message: string, data?: LogData): void {
     if (!this.shouldLog(LogLevel.WARN)) return;
     const formattedData = this.formatMessage("warn", message, data);
     console.warn(
-      this.colorize(this.levelColors.warn, this.formatLogLevel("warn")) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize(this.levelColors.warn, this.formatLogLevel("warn"))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Log a debug message
    * 
-   * @param {string} message - The debug message
-   * @param {LogData} [data] - Optional data to include
+   * @param message - The debug message
+   * @param data - Optional data to include
    */
   debug(message: string, data?: LogData): void {
     if (!this.shouldLog(LogLevel.DEBUG)) return;
     const formattedData = this.formatMessage("debug", message, data);
     console.debug(
-      this.colorize(this.levelColors.debug, this.formatLogLevel("debug")) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize(this.levelColors.debug, this.formatLogLevel("debug"))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Log a trace message (most verbose level)
    * 
-   * @param {string} message - The trace message
-   * @param {LogData} [data] - Optional data to include
+   * @param message - The trace message
+   * @param data - Optional data to include
    */
   trace(message: string, data?: LogData): void {
     if (!this.shouldLog(LogLevel.TRACE)) return;
     const formattedData = this.formatMessage("trace", message, data);
     console.debug(
-      this.colorize(this.levelColors.trace, this.formatLogLevel("trace")) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize(this.levelColors.trace, this.formatLogLevel("trace"))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Log an action message (for server actions or important user interactions)
    * 
-   * @param {string} message - The action message
-   * @param {LogData} [data] - Optional data to include
+   * @param message - The action message
+   * @param data - Optional data to include
    */
   action(message: string, data?: LogData): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
     const formattedData = this.formatMessage("action", message, data);
     console.log(
-      this.colorize(this.levelColors.action, this.formatLogLevel("action")) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize(this.levelColors.action, this.formatLogLevel("action"))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Log a success message
    * 
-   * @param {string} message - The success message
-   * @param {LogData} [data] - Optional data to include
+   * @param message - The success message
+   * @param data - Optional data to include
    */
   success(message: string, data?: LogData): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
     const formattedData = this.formatMessage("success", message, data);
     console.log(
-      this.colorize(this.levelColors.success, this.formatLogLevel("success")) +
-        " " +
-        this.formatOutput(formattedData)
+      `${this.colorize(this.levelColors.success, this.formatLogLevel("success"))} ${this.formatOutput(formattedData)}`
     );
   }
 
   /**
    * Group related log messages (console.group wrapper)
    * 
-   * @param {string} label - The group label
+   * @param label - The group label
    */
   group(label: string): void {
     if (!this.shouldLog(LogLevel.INFO)) return;
@@ -414,13 +409,13 @@ export class Logger {
    * Log execution time of a function
    * 
    * @template T - The return type of the function being timed
-   * @param {string} label - Description of the operation being timed
-   * @param {() => Promise<T> | T} fn - Function to execute and time
-   * @returns {Promise<T>} The result of the function execution
+   * @param label - Description of the operation being timed
+   * @param fn - Function to execute and time
+   * @returns The result of the function execution
    */
   async time<T>(label: string, fn: () => Promise<T> | T): Promise<T> {
     if (!this.shouldLog(LogLevel.DEBUG)) return fn();
-    
+
     const startTime = performance.now();
     try {
       const result = await fn();
