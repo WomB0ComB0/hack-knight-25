@@ -5,8 +5,7 @@ Hack Knight '25: Secure Blockchain-Based Healthcare Management
 [![Next.js 14](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 [![Bun](https://img.shields.io/badge/Bun-latest-orange)](https://bun.sh/)
-
----
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-3.4-38B2AC)](https://tailwindcss.com/)
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -26,76 +25,84 @@ Hack Knight '25: Secure Blockchain-Based Healthcare Management
 
 ## Overview
 
-**Hack Knight '25** is a comprehensive, full-stack implementation of a decentralized healthcare ledger. At its core, it leverages a custom-built Python blockchain to maintain immutable, encrypted medical records. By combining the security of Proof-of-Work (PoW) with a modern React-based frontend, the platform provides a transparent yet private ecosystem for patients and healthcare providers to manage appointments, medical histories, and sensitive health data.
+**Hack Knight '25** is a production-grade, full-stack implementation of a decentralized healthcare ledger system. Developed to address the critical needs of data integrity, security, and interoperability in the medical field, the platform utilizes a custom-built Python blockchain backend coupled with a modern Next.js frontend.
 
-The project demonstrates how blockchain can resolve common interoperability and security issues in the healthcare sector, ensuring that medical records are tamper-proof and verifiable across distributed nodes.
+The system ensures that medical records are immutable, timestamped, and cryptographically secured. By employing a Proof-of-Work (PoW) consensus mechanism and a robust encryption layer, it provides a transparent yet private ecosystem where patients own their data and healthcare providers can verify medical histories without centralized points of failure.
 
 ---
 
 ## Key Features
 
-- **Custom Blockchain Engine**: A native Python implementation of a distributed ledger featuring SHA-256 hashing, nonce-based Proof of Work, and consensus algorithms.
-- **Medical Record Encryption**: Secure handling of sensitive data using a dedicated encryption layer (`medical_encryption.key`) to ensure patient privacy.
-- **Dynamic Node Discovery**: Peer-to-peer node registration and conflict resolution using a longest-chain consensus mechanism.
-- **Real-time Patient Dashboard**: A high-fidelity Next.js interface for viewing health summaries, appointment histories, and blockchain status.
-- **Secure Authentication**: Integrated auth service for managing medical professional and patient access.
-- **Mining Mechanism**: Functional mining rewards and transaction validation to simulate a realistic decentralized network.
-- **Modern UI/UX**: Built with Tailwind CSS, Shadcn/UI, and Radix UI primitives for a professional, accessible medical interface.
+- **Custom Blockchain Engine**: A native Python implementation featuring SHA-256 hashing, linked block structures, and a persistent ledger.
+- **Proof-of-Work (PoW)**: A nonce-based mining algorithm that secures the network against tampering.
+- **Medical Record Encryption**: Built-in encryption logic (`medical_encryption.key`) to ensure sensitive patient information is never stored in plaintext on the ledger.
+- **Distributed Consensus**: Automatic conflict resolution using the "Longest Chain" rule, allowing multiple nodes to synchronize state across the network.
+- **Healthcare Specific Data Models**: Specialized structures for appointments, patient histories, and provider credentials defined in `healthcare_structure.py`.
+- **Modern Patient Dashboard**: A high-fidelity React interface featuring health summaries, appointment scheduling, and real-time blockchain status visualizations.
+- **Responsive UI Components**: A comprehensive library of accessible components built with Radix UI and Shadcn/UI, including data tables, charts, and interactive cards.
+- **Integrated Chat System**: A built-in interface for patient-provider communication.
 
 ---
 
 ## Architecture
 
-The system is split into two primary components: a **Blockchain Node (Backend)** and a **Next.js Dashboard (Frontend)**.
+The project follows a decoupled client-server architecture. The Python backend manages the cryptographic ledger and peer-to-peer logic, while the Next.js frontend handles the user experience and provides a bridge to the blockchain API.
 
 ```mermaid
 graph TD
-    subgraph Client_Layer [Frontend - Next.js]
-        UI[Patient Dashboard]
-        CP[Chat/Appointment Interface]
-        API_C[API Client / Hooks]
+    subgraph Client_Layer [Frontend - Next.js 14]
+        Dashboard[Patient Dashboard]
+        Appt[Appointment Manager]
+        Chat[Provider Chat]
+        API_C[API Client & Hooks]
     end
 
-    subgraph API_Layer [Backend - Flask]
-        FL[Flask REST API]
-        AS[Auth Service]
-        ME[Medical Encryption]
+    subgraph API_Gateway [Communication]
+        REST[RESTful API / Flask]
+        WS[Middleware]
     end
 
-    subgraph Core_Blockchain [Blockchain Logic]
+    subgraph Core_Logic [Blockchain Backend]
+        Auth[Auth Service]
         BC[Blockchain Manager]
-        MEM[Transaction Pool]
-        POW[Proof of Work Engine]
-        CH[Chain Storage/Ledger]
+        Pool[Transaction Mempool]
+        Mine[Mining Engine / PoW]
+        Enc[Medical Encryption Layer]
     end
 
-    UI --> API_C
-    API_C --> FL
-    FL --> AS
-    FL --> BC
-    BC --> MEM
-    BC --> POW
-    POW --> CH
-    FL --> ME
+    subgraph Persistence [Storage]
+        Ledger[(Blockchain Ledger)]
+        State[(Node State)]
+    end
+
+    Dashboard --> API_C
+    API_C --> REST
+    REST --> Auth
+    REST --> BC
+    BC --> Pool
+    Pool --> Mine
+    Mine --> Ledger
+    BC --> Enc
+    REST --> State
 ```
 
 ---
 
 ## Tech Stack
 
-### Backend (Blockchain)
+### Backend (Blockchain & API)
 - **Language**: Python 3.9+
-- **Framework**: Flask (RESTful API)
-- **Environment**: Pipenv / Requirements.txt
-- **Security**: SHA-256 Hashing, Custom Encryption Keys
-- **Data Structures**: Complex JSON-based Block structures with linked hashes
+- **Framework**: Flask (Web Server Gateway)
+- **Security**: SHA-256 Hashing, Fernet Symmetric Encryption
+- **Package Management**: Pipenv / Requirements.txt
+- **Logic**: Custom Peer-to-Peer Node Discovery & Consensus
 
-### Frontend (Dashboard)
+### Frontend (User Interface)
 - **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS, PostCSS
-- **Components**: Shadcn/UI, Lucide React
-- **State/Tooling**: Bun, Storybook
+- **Language**: TypeScript (Strict Mode)
+- **Styling**: Tailwind CSS
+- **UI Library**: Shadcn/UI, Radix UI, Lucide React
+- **Development Tooling**: Bun, Storybook, PostCSS
 
 ---
 
@@ -112,49 +119,56 @@ git clone https://github.com/WomB0ComB0/hack-knight-25.git
 cd hack-knight-25
 ```
 
-### 2. Automatic Setup (Concurrent)
-This project uses `concurrently` to start both services.
+### 2. Install Dependencies
+
+**Root & Frontend:**
 ```bash
 bun install
-bun run dev
 ```
-
-### 3. Manual Setup
 
 **Backend:**
 ```bash
 cd blockchain
 pip install -r requirements.txt
-python -m blockchain
 ```
 
-**Frontend:**
+### 3. Run the Application
+The project includes a root-level `package.json` that uses `concurrently` to launch both the backend and frontend with a single command:
+
 ```bash
-cd frontend
-bun install
+# From the project root
 bun run dev
 ```
+
+The services will be available at:
+- **Frontend**: [http://localhost:3000](http://localhost:3000)
+- **Blockchain API**: [http://localhost:5000](http://localhost:5000)
 
 ---
 
 ## Usage
 
-### Submitting a Transaction
-Transactions represent medical records or data updates. Submit them via the UI or directly through the API:
-```bash
-curl -X POST -H "Content-Type: application/json" \
--d '{"sender": "Dr_Smith", "recipient": "Patient_A", "amount": 1, "signature": "hex_signature"}' \
-http://localhost:5000/transactions/new
-```
-
-### Mining a Block
-To commit pending transactions to the ledger, you must mine a new block:
+### Mining Medical Records
+To finalize a set of medical transactions and add them to the ledger, a "Mining" operation must be triggered. This can be done via the UI or via API:
 ```bash
 curl -X GET http://localhost:5000/mine
 ```
 
-### Chain Validation
-To ensure your local node is synchronized with the network:
+### Submitting Patient Data
+Transactions represent health events. To add a new record to the pending pool:
+```bash
+curl -X POST -H "Content-Type: application/json" \
+-d '{
+  "sender": "Clinic_Main",
+  "recipient": "Patient_UUID_123",
+  "amount": 1, 
+  "medical_data": "Encrypted_String_Here"
+}' \
+http://localhost:5000/transactions/new
+```
+
+### Network Synchronization
+If running multiple nodes, use the resolution endpoint to ensure the local node has the most recent valid chain:
 ```bash
 curl -X GET http://localhost:5000/nodes/resolve
 ```
@@ -163,15 +177,16 @@ curl -X GET http://localhost:5000/nodes/resolve
 
 ## Configuration
 
-### Blockchain (`blockchain/config.ini`)
-The backend relies on a configuration file for network settings and difficulty levels.
-- `difficulty`: Defines the number of leading zeros required for PoW (default: 4).
-- `mining_reward`: Amount granted to the miner.
+### Backend (`blockchain/config.ini`)
+Configures the operational parameters of the blockchain.
+- `difficulty`: Set PoW difficulty (default `4`). Higher values increase mining time.
+- `reward`: The amount awarded to the node for mining a block.
 
-### Frontend (`frontend/.env`)
-Create a `.env` file in the frontend directory:
+### Frontend Environment (`frontend/.env`)
+Create a `.env` file in the `frontend` directory:
 ```env
 NEXT_PUBLIC_BLOCKCHAIN_API=http://localhost:5000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
 ---
@@ -181,23 +196,18 @@ NEXT_PUBLIC_BLOCKCHAIN_API=http://localhost:5000
 ### Blockchain Core
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/` | GET | API Status & Base Info |
-| `/chain` | GET | Returns the full blockchain ledger |
-| `/mine` | GET | Triggers Proof of Work and adds a new block |
-| `/transactions/new` | POST | Submits a new transaction to the mempool |
+| `/chain` | GET | Returns the full blockchain (list of blocks). |
+| `/mine` | GET | Initiates PoW and mines a new block. |
+| `/transactions/new` | POST | Adds a new medical transaction to the mempool. |
+| `/nodes/register` | POST | Accepts a list of new nodes in JSON format. |
+| `/nodes/resolve` | GET | Consensus algorithm: resolves conflicts by taking the longest chain. |
 
-### Node Management
+### Healthcare Specific
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
-| `/nodes/register` | POST | Registers new nodes in the network |
-| `/nodes/resolve` | GET | Runs consensus algorithm to resolve conflicts |
-| `/nodes/get` | GET | List all known nodes |
-
-### Medical Features
-| Endpoint | Method | Description |
-| :--- | :--- | :--- |
-| `/api/appointments` | GET/POST | Fetch or schedule patient appointments |
-| `/api/health` | GET | Basic health check for the frontend bridge |
+| `/api/appointments` | GET | Fetch scheduled medical appointments. |
+| `/api/appointments` | POST | Create a new appointment entry. |
+| `/api/health` | GET | Returns the status of the blockchain node connection. |
 
 ---
 
@@ -206,51 +216,56 @@ NEXT_PUBLIC_BLOCKCHAIN_API=http://localhost:5000
 ### Directory Structure
 ```text
 ├── blockchain/            # Python Flask Backend
-│   ├── app.py             # API Routes
-│   ├── blockchain.py      # Core Blockchain Logic
-│   └── auth_service.py    # Identity Management
+│   ├── blockchain.py      # Core Blockchain implementation
+│   ├── app.py             # Flask API routes and server
+│   ├── auth_service.py    # Identity and Access Management
+│   └── healthcare_structure.py # Medical data schemas
 ├── frontend/              # Next.js Application
-│   ├── src/app/           # Routes (Dashboard, Chat, Signin)
-│   ├── src/components/    # Shared UI Components
-│   └── src/hooks/         # Custom React Hooks
-└── package.json           # Root scripts
+│   ├── src/app/           # App Router (Pages & API routes)
+│   ├── src/components/    # Reusable UI components
+│   ├── src/lib/           # Utility functions (shadcn/ui utils)
+│   └── src/hooks/         # Custom React hooks (use-toast, etc.)
+└── package.json           # Root scripts for development
 ```
 
-### UI Components & Storybook
-We use Storybook for isolated component development.
+### Component Documentation (Storybook)
+The frontend uses Storybook for isolated component development and testing. To view the component library:
 ```bash
 cd frontend
 bun run storybook
 ```
 
-### Testing
-- **Blockchain**: Logic is handled in `blockchain_structure.py`. Verify hashes using local scripts.
-- **Frontend**: Components use TypeScript for strict type checking on medical data structures.
+### Encryption Key Management
+The `medical_encryption.key` file in the `blockchain/` folder is essential for decrypting patient data. Ensure this file is backed up securely and never committed to public repositories in a production environment.
 
 ---
 
 ## Roadmap
 
-- [ ] **Asymmetric Encryption**: Implement RSA key pairs for patients to sign their own records.
-- [ ] **IPFS Integration**: Store large medical images (X-rays, MRI) on IPFS and store hashes on the blockchain.
-- [ ] **Smart Contracts**: Add programmable logic for insurance payouts and automated prescriptions.
-- [ ] **Mobile App**: Develop a React Native companion app for patients to access records via QR codes.
+- [ ] **Zero-Knowledge Proofs (ZKP)**: Implement ZKPs for age or condition verification without revealing identity.
+- [ ] **Decentralized Identifiers (DIDs)**: Integrate W3C standard DIDs for patients and doctors.
+- [ ] **Multi-Signature Approvals**: Require both doctor and patient signatures for record modification.
+- [ ] **IPFS Storage Layer**: Transition from on-chain data storage to IPFS hashes for large medical files (e.g., DICOM images).
+- [ ] **Governance Token**: Introduce a utility token for incentivizing research data sharing.
 
 ---
 
 ## Contributing
 
-1. Fork the Project.
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`).
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`).
-4. Push to the Branch (`git push origin feature/AmazingFeature`).
-5. Open a Pull Request.
+Contributions are welcome to help improve the security and efficiency of the healthcare ledger.
+
+1. **Fork** the repository.
+2. **Create** a feature branch (`git checkout -b feature/AmazingFeature`).
+3. **Commit** your changes (`git commit -m 'Add some AmazingFeature'`).
+4. **Push** to the branch (`git push origin feature/AmazingFeature`).
+5. **Open** a Pull Request.
 
 ---
 
 ## License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the **MIT License**. See `LICENSE` in the root directory for more information.
 
 ---
-*Created for Hack Knight '25 - A Secure Future for Healthcare.*
+
+**Disclaimer**: This project was developed for Hack Knight '25. While it demonstrates robust blockchain principles, it should undergo thorough security audits before being used for actual Protected Health Information (PHI) in a regulated environment.
