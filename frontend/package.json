@@ -147,7 +147,7 @@
     "ts-jest": "^29.1.1",
     "tsc": "^2.0.4",
     "typescript": "^5",
-    "webpack": "5.89.0"
+    "webpack": "5.104.1"
   },
   "packageManager": "bun@1.2.4"
 }
